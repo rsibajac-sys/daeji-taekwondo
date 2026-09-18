@@ -1,0 +1,582 @@
+.counter {
+  font-size: 16px;
+  padding: 5px 10px;
+  border-radius: 5px;
+  color: var(--accent);
+  background: var(--accent-bg);
+  border: 2px solid transparent;
+  transition: border-color 0.3s;
+  margin-bottom: 24px;
+
+  &:hover {
+    border-color: var(--accent-border);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+}
+
+.hero {
+  position: relative;
+
+  .base,
+  .framework,
+  .vite {
+    inset-inline: 0;
+    margin: 0 auto;
+  }
+
+  .base {
+    width: 170px;
+    position: relative;
+    z-index: 0;
+  }
+
+  .framework,
+  .vite {
+    position: absolute;
+  }
+
+  .framework {
+    z-index: 1;
+    top: 34px;
+    height: 28px;
+    transform: perspective(2000px) rotateZ(300deg) rotateX(44deg) rotateY(39deg)
+      scale(1.4);
+  }
+
+  .vite {
+    z-index: 0;
+    top: 107px;
+    height: 26px;
+    width: auto;
+    transform: perspective(2000px) rotateZ(300deg) rotateX(40deg) rotateY(39deg)
+      scale(0.8);
+  }
+}
+
+#center {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+  place-content: center;
+  place-items: center;
+  flex-grow: 1;
+
+  @media (max-width: 1024px) {
+    padding: 32px 20px 24px;
+    gap: 18px;
+  }
+}
+
+#next-steps {
+  display: flex;
+  border-top: 1px solid var(--border);
+  text-align: left;
+
+  & > div {
+    flex: 1 1 0;
+    padding: 32px;
+    @media (max-width: 1024px) {
+      padding: 24px 20px;
+    }
+  }
+
+  .icon {
+    margin-bottom: 16px;
+    width: 22px;
+    height: 22px;
+  }
+
+  @media (max-width: 1024px) {
+    flex-direction: column;
+    text-align: center;
+  }
+}
+
+#docs {
+  border-right: 1px solid var(--border);
+
+  @media (max-width: 1024px) {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+}
+
+#next-steps ul {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  gap: 8px;
+  margin: 32px 0 0;
+
+  .logo {
+    height: 18px;
+  }
+
+  a {
+    color: var(--text-h);
+    font-size: 16px;
+    border-radius: 6px;
+    background: var(--social-bg);
+    display: flex;
+    padding: 6px 12px;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    transition: box-shadow 0.3s;
+
+    &:hover {
+      box-shadow: var(--shadow);
+    }
+    .button-icon {
+      height: 18px;
+      width: 18px;
+    }
+  }
+
+  @media (max-width: 1024px) {
+    margin-top: 20px;
+    flex-wrap: wrap;
+    justify-content: center;
+
+    li {
+      flex: 1 1 calc(50% - 8px);
+    }
+
+    a {
+      width: 100%;
+      justify-content: center;
+      box-sizing: border-box;
+    }
+  }
+}
+
+#spacer {
+  height: 88px;
+  border-top: 1px solid var(--border);
+  @media (max-width: 1024px) {
+    height: 48px;
+  }
+}
+
+.ticks {
+  position: relative;
+  width: 100%;
+
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    top: -4.5px;
+    border: 5px solid transparent;
+  }
+
+  &::before {
+    left: 0;
+    border-left-color: var(--border);
+  }
+  &::after {
+    right: 0;
+    border-right-color: var(--border);
+  }
+}
+
+
+
+
+/* ==========================================================================
+   CSS DAEJI HOME (CORREGIDO - TAMAÑOS NORMALES Y AISLAMIENTO TOTAL)
+   ========================================================================== */
+
+/* Aislamiento: Todo dentro de este contenedor no afectará al resto de tu app */
+.daeji-home-wrapper {
+  background-color: #07111e;
+  color: #fff;
+  font-family: 'Inter', system-ui, sans-serif;
+  overflow-x: hidden;
+}
+
+.daeji-home-wrapper * {
+  box-sizing: border-box; /* Evita que los paddings rompan el tamaño */
+}
+
+.daeji-container {
+  max-width: 1000px; /* Reducido de 1200px para que no se vea tan ancho */
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+.daeji-section { padding: 60px 0; } /* Reducido de 80px */
+.daeji-mt-4 { margin-top: 30px; }
+.daeji-center-text { text-align: center; }
+.daeji-center-box { margin-left: auto; margin-right: auto; }
+
+/* HEADER */
+.daeji-header {
+  position: fixed; top: 0; left: 0; width: 100%;
+  padding: 15px 30px;
+  display: flex; justify-content: space-between; align-items: center;
+  z-index: 100; transition: 0.3s;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.8), transparent);
+}
+.daeji-header.scrolled {
+  background: rgba(7, 17, 30, 0.95);
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  padding: 10px 30px;
+}
+.daeji-logo { width: 100px; transition: 0.3s; }
+.daeji-header.scrolled .daeji-logo { width: 80px; }
+
+.daeji-btn-acceso {
+  background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2);
+  color: #fff; padding: 6px 12px; border-radius: 6px; font-size: 0.8rem;
+  font-weight: bold; cursor: pointer; transition: 0.3s;
+}
+.daeji-btn-acceso:hover { background: #e63946; border-color: #e63946; }
+
+/* HERO - TAMAÑO CORREGIDO */
+.daeji-hero {
+  position: relative;
+  height: 80vh; /* Ya no es 100vh, para evitar que se vea gigante en PC */
+  min-height: 500px;
+  max-height: 700px;
+  display: flex; align-items: center; justify-content: center;
+  overflow: hidden;
+}
+.daeji-video-bg {
+  position: absolute; top: 0; left: 0;
+  width: 100%; height: 100%;
+  object-fit: cover; /* Esto arregla que el video se vea desordenado */
+  z-index: 0;
+}
+.daeji-overlay {
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(5, 11, 20, 0.6); z-index: 1;
+}
+.daeji-hero-content {
+  position: relative; z-index: 2; text-align: center; max-width: 700px; padding: 0 20px;
+}
+.daeji-logo-hero { width: 160px; margin-bottom: 15px; } /* Reducido */
+.daeji-title {
+  font-size: 2.2rem; /* Reducido de 3.5rem */
+  font-weight: 900; margin: 0 0 10px 0; text-transform: uppercase;
+}
+.daeji-subtitle { font-size: 1rem; color: #ccc; margin-bottom: 25px; }
+
+.daeji-hero-buttons { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.daeji-btn-primary {
+  background: #e63946; color: #fff; border: none;
+  padding: 10px 20px; border-radius: 6px; font-weight: bold; font-size: 0.85rem; cursor: pointer;
+}
+.daeji-btn-outline {
+  background: transparent; color: #fff; border: 2px solid #fff;
+  padding: 10px 20px; border-radius: 6px; font-weight: bold; font-size: 0.85rem; cursor: pointer;
+}
+
+/* TIPOGRAFIA GENERAL */
+.daeji-h2 { font-size: 1.8rem; font-weight: 800; margin: 0 0 10px 0; }
+.daeji-line { height: 3px; width: 50px; background: #e63946; margin-bottom: 20px; }
+.daeji-p { font-size: 0.95rem; color: #aaa; line-height: 1.5; max-width: 700px; margin: 0 auto; }
+
+/* GRIDS ESPECÍFICOS */
+.daeji-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.daeji-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; }
+.daeji-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
+
+/* TARJETAS GLASS */
+.daeji-card-glass {
+  background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px; overflow: hidden;
+}
+.daeji-card-img { width: 100%; height: 180px; object-fit: cover; border-bottom: 2px solid #e63946; }
+.daeji-card-body { padding: 20px; }
+.daeji-card-body h3 { margin: 0 0 10px 0; font-size: 1.2rem; }
+.daeji-card-body p { margin: 0; font-size: 0.85rem; color: #aaa; line-height: 1.4; }
+
+/* VALORES */
+.daeji-values { background: #040912; border-top: 1px solid #111; border-bottom: 1px solid #111; }
+.daeji-value-item { text-align: center; padding: 15px; }
+.daeji-icon { font-size: 2.2rem; display: block; margin-bottom: 10px; }
+.daeji-value-item h4 { margin: 0 0 5px 0; font-size: 1rem; }
+.daeji-value-item p { margin: 0; font-size: 0.8rem; color: #888; }
+
+/* PANELES (HORARIOS Y PROGRAMAS) */
+.daeji-panel {
+  background: rgba(10,25,47,0.6); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px; padding: 25px;
+}
+.daeji-h3-blue { color: #3498db; margin: 0 0 15px 0; font-size: 1.1rem; border-bottom: 1px solid #222; padding-bottom: 8px; }
+.daeji-list { list-style: none; padding: 0; margin: 0; }
+.daeji-list li { margin-bottom: 12px; font-size: 0.85rem; color: #ccc; }
+.daeji-list strong { color: #fff; }
+.daeji-alert-red { background: rgba(230,57,70,0.15); color: #e63946; padding: 8px; border-radius: 6px; font-size: 0.85rem; margin-bottom: 15px; }
+.daeji-schedule h4 { margin: 0 0 8px 0; font-size: 0.95rem; }
+.daeji-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px dashed #222; font-size: 0.85rem; color: #aaa; }
+.daeji-highlight { color: #f1c40f; font-weight: bold; border-color: rgba(241,196,15,0.3); }
+
+/* ATLETAS */
+.daeji-badge { background: #3498db; color: #fff; padding: 3px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; display: inline-block; margin-bottom: 8px; }
+.daeji-atleta-card { background: #07111e; border: 1px solid #222; border-radius: 8px; text-align: center; overflow: hidden; }
+.daeji-atleta-photo { height: 220px; background: #112240; display: flex; align-items: center; justify-content: center; font-size: 3rem; border-bottom: 2px solid #3498db; }
+.daeji-atleta-info { padding: 15px; }
+.daeji-atleta-info h4 { margin: 0 0 5px 0; font-size: 0.95rem; }
+.daeji-logro { margin: 0 0 8px 0; font-size: 0.75rem; color: #f1c40f; font-weight: bold; }
+.daeji-evento { background: #222; padding: 2px 6px; border-radius: 4px; font-size: 0.65rem; color: #aaa; }
+
+/* CONTACTO CTA */
+.daeji-cta { background: #040912; }
+.daeji-contact-box { background: rgba(255,255,255,0.03); border: 1px solid #222; padding: 15px; border-radius: 8px; }
+.daeji-icon-small { font-size: 1.5rem; display: block; margin-bottom: 5px; }
+.daeji-contact-box p { margin: 5px 0 0 0; font-size: 0.8rem; color: #888; }
+
+/* FOOTER */
+.daeji-footer { background: #000; padding: 20px; text-align: center; border-top: 1px solid #111; font-size: 0.9rem; }
+.daeji-footer p { margin: 0; }
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  .daeji-grid-2, .daeji-grid-3, .daeji-grid-4 { grid-template-columns: 1fr; }
+  .daeji-title { font-size: 1.8rem; }
+  .daeji-hero { height: 60vh; }
+  .daeji-header { padding: 10px 20px; }
+}
+
+
+/* ==========================================================================
+   CSS PARA TARJETAS INTERACTIVAS DE ATLETAS (EFECTO FLIP)
+   ========================================================================== */
+
+/* Contenedor principal que da perspectiva 3D */
+.daeji-flip-card {
+  background-color: transparent;
+  width: 100%;
+  perspective: 1000px; /* Profundidad del efecto 3D */
+  cursor: pointer;
+}
+
+.daeji-flip-large { height: 380px; }
+.daeji-flip-small { height: 400px; }
+
+/* El contenedor interno que realmente gira */
+.daeji-flip-card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  text-align: center;
+  transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1);
+  transform-style: preserve-3d;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+  border-radius: 12px;
+}
+
+/* Al pasar el mouse, gira 180 grados */
+.daeji-flip-card:hover .daeji-flip-card-inner {
+  transform: rotateY(180deg);
+}
+
+/* Estructura compartida del frente y el dorso */
+.daeji-flip-card-front, .daeji-flip-card-back {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  -webkit-backface-visibility: hidden; /* Oculta la parte trasera para Safari */
+  backface-visibility: hidden;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #222;
+}
+
+/* FRENTE */
+.daeji-flip-card-front {
+  background-color: #07111e;
+  color: white;
+  display: flex;
+  flex-direction: column;
+}
+
+.daeji-categoria-tag {
+  background: #e63946;
+  color: white;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  display: inline-block;
+  margin-bottom: 8px;
+}
+
+.daeji-logro-principal {
+  color: #f1c40f;
+  font-weight: 800;
+  margin: 5px 0 10px 0;
+  font-size: 1.1rem;
+}
+
+.daeji-hint-flip {
+  margin-top: auto;
+  font-size: 0.75rem;
+  color: #666;
+  padding-top: 10px;
+  border-top: 1px dashed #222;
+}
+
+/* DORSO */
+.daeji-flip-card-back {
+  background: linear-gradient(135deg, #0a192f 0%, #050b14 100%);
+  color: white;
+  transform: rotateY(180deg);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 25px;
+  border: 1px solid #3498db;
+}
+
+.daeji-palmares-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  text-align: left;
+}
+
+.daeji-palmares-list li {
+  font-size: 0.85rem;
+  color: #ccc;
+  margin-bottom: 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  padding-bottom: 8px;
+}
+.daeji-palmares-list li:last-child {
+  border-bottom: none;
+}
+/* ==========================================================================
+   ESTILOS UNIFICADOS PARA TARJETAS DE ATLETAS (TAMAÑO FIJO E IMÁGENES COMPLETAS)
+   ========================================================================== */
+
+.daeji-flip-card.daeji-flip-uniforme {
+  background-color: transparent;
+  width: 100%;
+  height: 420px; /* Altura idéntica y grande para TODAS las tarjetas */
+  perspective: 1000px;
+  cursor: pointer;
+}
+
+.daeji-flip-card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  text-align: center;
+  transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1);
+  transform-style: preserve-3d;
+  box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+  border-radius: 12px;
+}
+
+.daeji-flip-card.daeji-flip-uniforme:hover .daeji-flip-card-inner {
+  transform: rotateY(180deg);
+}
+
+.daeji-flip-card-front, .daeji-flip-card-back {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #222;
+}
+
+/* FRENTE DE LA TARJETA */
+.daeji-flip-card-front {
+  background-color: #07111e;
+  color: white;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Contenedor estricto para la foto */
+.daeji-atleta-photo-contenedor {
+  width: 100%;
+  height: 200px; /* Espacio de altura fijo para la imagen */
+  background-color: #040912; /* Fondo elegante oscuro para rellenar espacios */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3rem;
+  border-bottom: 2px solid rgba(255,255,255,0.05);
+}
+
+/* La imagen se ajusta sin recortarse ni perderse */
+.daeji-atleta-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover !important; /* Volvemos a cover para que llene el espacio */
+  object-position: top center; /* Mantiene enfocada la parte superior (las caras) */
+}
+
+.daeji-atleta-info {
+  padding: 15px;
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+}
+
+.daeji-categoria-tag {
+  background: #e63946;
+  color: white;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  display: inline-block;
+  margin-bottom: 5px;
+  align-self: center;
+}
+
+.daeji-logro-principal {
+  color: #f1c40f;
+  font-weight: 800;
+  margin: 5px 0;
+  font-size: 1rem;
+}
+
+.daeji-hint-flip {
+  margin-top: auto;
+  font-size: 0.75rem;
+  color: #666;
+  padding-top: 5px;
+  border-top: 1px dashed #222;
+}
+
+/* DORSO DE LA TARJETA */
+.daeji-flip-card-back {
+  background: linear-gradient(135deg, #0a192f 0%, #050b14 100%);
+  color: white;
+  transform: rotateY(180deg);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 25px;
+  border: 1px solid #3498db;
+}
+
+.daeji-palmares-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  text-align: left;
+}
+
+.daeji-palmares-list li {
+  font-size: 0.85rem;
+  color: #ccc;
+  margin-bottom: 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  padding-bottom: 8px;
+}
+.daeji-palmares-list li:last-child {
+  border-bottom: none;
+}
