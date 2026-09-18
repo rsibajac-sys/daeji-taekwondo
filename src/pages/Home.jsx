@@ -6,9 +6,9 @@ import 'aos/dist/aos.css';
 import '../App.css'; 
 
 import logoDaeji from '../assets/logo-letras.png';
-import videoIntro from '../assets/intro.mp4';
-import imgMision from '../assets/bienvenida/mision.png';
-import imgvision from '../assets/bienvenida/vision.jpeg'; 
+import videoIntro from '../assets/Intro.mp4';
+import imgMision from '../assets/bienvenida/Mision.png';
+import imgvision from '../assets/bienvenida/vision.jpg'; 
 
 // fotos atletas
 import fotoZoe from '../assets/atletas/zoe.jpeg';
