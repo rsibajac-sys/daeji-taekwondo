@@ -725,6 +725,8 @@ export default function Dashboard() {
                           <option value="Cinturón Blanco">Cinturón Blanco (10° Gup)</option>
                           <option value="Cinturón Blanco-Amarillo">Cinturón Blanco - Amarillo (9° Gup)</option>
                           <option value="Cinturón Amarillo">Cinturón Amarillo (8° Gup)</option>
+                          <option value="Cinturón Amarillo">Cinturón Amarillo- naranja (8° Gup)</option>
+                          <option value="Cinturón Amarillo">Cinturón naranja (7° Gup)</option>
                           <option value="Cinturón Amarillo-Verde">Cinturón Amarillo - Verde (7° Gup)</option>
                           <option value="Cinturón Verde">Cinturón Verde (6° Gup)</option>
                           <option value="Cinturón Verde-Azul">Cinturón Verde - Azul (5° Gup)</option>
@@ -733,6 +735,10 @@ export default function Dashboard() {
                           <option value="Cinturón Rojo">Cinturón Rojo (2° Gup)</option>
                           <option value="Cinturón Rojo-Negro">Cinturón Rojo - Negro (1° Gup)</option>
                           <option value="Cinturón Negro 1er Dan">Cinturón Negro (1er Dan)</option>
+                          <option value="Cinturón Negro 1er Dan">Cinturón Negro (2er Dan)</option>
+                          <option value="Cinturón Negro 1er Dan">Cinturón Negro (3er Dan)</option>
+                          <option value="Cinturón Negro 1er Dan">Cinturón Negro (4er Dan)</option>
+                          <option value="Cinturón Negro 1er Dan">Cinturón Negro (5er Dan)</option>
                         </select>
                       </div>
 

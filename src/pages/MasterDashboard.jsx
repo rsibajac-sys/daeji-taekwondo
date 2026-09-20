@@ -17,6 +17,18 @@ export default function MasterDashboard() {
   const [busquedaAtleta, setBusquedaAtleta] = useState('');
   const [guardandoMasivoAtletas, setGuardandoMasivoAtletas] = useState(false);
 
+  // Estados para Gestión de Eventos y Convocatorias
+  const [listaEventos, setListaEventos] = useState([]);
+  const [tituloEvento, setTituloEvento] = useState('');
+  const [tipoEvento, setTipoEvento] = useState('Examen'); // Examen, Capacitación, Exhibición, Torneo
+  const [descripcionEvento, setDescripcionEvento] = useState('');
+  const [costoEvento, setCostoEvento] = useState('0');
+  const [fechaInicioVisibilidad, setFechaInicioVisibilidad] = useState('');
+  const [fechaFinVisibilidad, setFechaFinVisibilidad] = useState('');
+  const [fechaRealEvento, setFechaRealEvento] = useState('');
+  const [fechaLimitePago, setFechaLimitePago] = useState('');
+  const [guardandoEvento, setGuardandoEvento] = useState(false);
+
   // Estados para Carga Masiva
   const [archivoSeleccionado, setArchivoSeleccionado] = useState(null);
   const [procesando, setProcesando] = useState(false);
@@ -51,6 +63,7 @@ export default function MasterDashboard() {
         setUsuario(usuarioActual);
         await cargarDatosGenerales();
         await cargarTutoresRegistrados();
+        await cargarEventos();
       } else {
         navigate('/login');
       }
@@ -153,6 +166,60 @@ export default function MasterDashboard() {
     }
   };
 
+  const cargarEventos = async () => {
+    try {
+      const querySnapshot = await getDocs(collection(db, 'eventos'));
+      const eventosTemp = [];
+      querySnapshot.forEach((docSnap) => {
+        eventosTemp.push({ id: docSnap.id, ...docSnap.data() });
+      });
+      setListaEventos(eventosTemp);
+    } catch (error) {
+      console.error("Error al cargar eventos:", error);
+    }
+  };
+
+  const crearNuevoEvento = async (e) => {
+    e.preventDefault();
+    if (!tituloEvento || !fechaRealEvento) {
+      alert("⚠️ Por favor completa al menos el título y la fecha del evento.");
+      return;
+    }
+
+    setGuardandoEvento(true);
+    try {
+      const nuevoEventoData = {
+        titulo: tituloEvento,
+        tipo: tipoEvento,
+        descripcion: descripcionEvento,
+        costo: costoEvento,
+        fechaInicioVisibilidad: fechaInicioVisibilidad || new Date().toISOString().split('T')[0],
+        fechaFinVisibilidad: fechaFinVisibilidad || fechaRealEvento,
+        fechaReal: fechaRealEvento,
+        fechaLimitePago: fechaLimitePago || fechaRealEvento,
+        creadoEn: new Date()
+      };
+
+      await addDoc(collection(db, 'eventos'), nuevoEventoData);
+      alert("✅ ¡Evento o convocatoria creado con éxito y visible para los atletas!");
+      
+      setTituloEvento('');
+      setDescripcionEvento('');
+      setCostoEvento('0');
+      setFechaInicioVisibilidad('');
+      setFechaFinVisibilidad('');
+      setFechaRealEvento('');
+      setFechaLimitePago('');
+      
+      await cargarEventos();
+    } catch (error) {
+      console.error("Error al crear evento:", error);
+      alert("❌ Ocurrió un error al guardar el evento.");
+    } finally {
+      setGuardandoEvento(false);
+    }
+  };
+
   const seleccionarTutor = async (correo) => {
     setTutorSeleccionado(correo);
     if (!correo) return;
@@ -221,6 +288,8 @@ export default function MasterDashboard() {
       await cargarDatosGenerales();
     } else if (seccion === 'roles') {
       await cargarTutoresRegistrados();
+    } else if (seccion === 'eventos') {
+      await cargarEventos();
     }
   };
 
@@ -460,6 +529,17 @@ export default function MasterDashboard() {
           </button>
 
           <button 
+            onClick={() => cambiarSeccion('eventos')}
+            style={{
+              padding: '12px 15px', borderRadius: '8px', border: 'none', textAlign: 'left', fontWeight: 'bold', cursor: 'pointer',
+              background: seccionActiva === 'eventos' ? '#e63946' : 'transparent',
+              color: seccionActiva === 'eventos' ? '#fff' : '#aaa'
+            }}
+          >
+            🏆 Convocatorias y Eventos
+          </button>
+
+          <button 
             onClick={() => cambiarSeccion('roles')}
             style={{
               padding: '12px 15px', borderRadius: '8px', border: 'none', textAlign: 'left', fontWeight: 'bold', cursor: 'pointer',
@@ -539,6 +619,9 @@ export default function MasterDashboard() {
               <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
                 <button onClick={() => cambiarSeccion('gestion')} className="btn-secundario" style={{ background: '#e63946', color: '#fff', border: 'none' }}>
                   Gestionar Atletas &rarr;
+                </button>
+                <button onClick={() => cambiarSeccion('eventos')} className="btn-secundario" style={{ background: '#e63946', color: '#fff', border: 'none' }}>
+                  Crear Eventos &rarr;
                 </button>
                 <button onClick={() => cambiarSeccion('roles')} className="btn-secundario" style={{ background: '#3498db', color: '#fff', border: 'none' }}>
                   Gestión de Roles &rarr;
@@ -662,6 +745,8 @@ export default function MasterDashboard() {
                           <option value="Cinturón Blanco">Blanco (10° Gup)</option>
                           <option value="Cinturón Blanco-Amarillo">Blanco-Amarillo (9° Gup)</option>
                           <option value="Cinturón Amarillo">Amarillo (8° Gup)</option>
+                          <option value="Cinturón Amarillo-Naranja">Amarillo-Naranja (8° Gup)</option>
+                          <option value="Cinturón Naranja">Naranja (7° Gup)</option>
                           <option value="Cinturón Amarillo-Verde">Amarillo-Verde (7° Gup)</option>
                           <option value="Cinturón Verde">Verde (6° Gup)</option>
                           <option value="Cinturón Verde-Azul">Verde-Azul (5° Gup)</option>
@@ -670,6 +755,9 @@ export default function MasterDashboard() {
                           <option value="Cinturón Rojo">Rojo (2° Gup)</option>
                           <option value="Cinturón Rojo-Negro">Rojo-Negro (1° Gup)</option>
                           <option value="Cinturón Negro 1er Dan">Negro (1er Dan)</option>
+                          <option value="Cinturón Negro 2do Dan">Negro (2do Dan)</option>
+                          <option value="Cinturón Negro 3er Dan">Negro (3er Dan)</option>
+                          <option value="Cinturón Negro 4to Dan">Negro (4to Dan)</option>
                         </select>
                       </div>
 
@@ -688,6 +776,118 @@ export default function MasterDashboard() {
                 </button>
               </div>
 
+            </div>
+          </div>
+        )}
+
+        {/* VISTA NUEVA: GESTIÓN DE EVENTOS */}
+        {seccionActiva === 'eventos' && (
+          <div style={{ maxWidth: '900px' }}>
+            <h2>🏆 Convocatorias, Exámenes y Eventos</h2>
+            <p style={{ color: '#aaa', marginBottom: '25px' }}>
+              Crea eventos oficiales. El sistema validará automáticamente la asistencia (&gt;80%), antigüedad (≥6 meses) y pagos de los alumnos al inscribirse.
+            </p>
+
+            <form onSubmit={crearNuevoEvento} style={{ background: 'rgba(7, 17, 30, 0.9)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '25px', marginBottom: '30px' }}>
+              <h3 style={{ margin: '0 0 20px 0', color: '#fff', fontSize: '1.1rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '10px' }}>
+                📝 Crear Nuevo Evento / Examen
+              </h3>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '15px', marginBottom: '15px' }}>
+                <div>
+                  <label style={{ fontSize: '0.8rem', color: '#aaa', display: 'block', marginBottom: '5px' }}>Título del Evento</label>
+                  <input 
+                    type="text" 
+                    placeholder="Ej. Examen de Promoción de Grados - Diciembre" 
+                    value={tituloEvento} 
+                    onChange={(e) => setTituloEvento(e.target.value)}
+                    required
+                    style={{ width: '100%', padding: '10px', background: '#121212', color: '#fff', border: '1px solid #333', borderRadius: '6px' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.8rem', color: '#aaa', display: 'block', marginBottom: '5px' }}>Tipo de Evento</label>
+                  <select 
+                    value={tipoEvento} 
+                    onChange={(e) => setTipoEvento(e.target.value)}
+                    style={{ width: '100%', padding: '10px', background: '#121212', color: '#fff', border: '1px solid #333', borderRadius: '6px' }}
+                  >
+                    <option value="Examen">Examen de Grado</option>
+                    <option value="Capacitacion">Capacitación</option>
+                    <option value="Exhibicion">Exhibición</option>
+                    <option value="Torneo">Torneo / Competencia</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '15px' }}>
+                <label style={{ fontSize: '0.8rem', color: '#aaa', display: 'block', marginBottom: '5px' }}>Descripción del Evento y Requisitos</label>
+                <textarea 
+                  rows="3"
+                  placeholder="Detalles del evento, lugar, hora y observaciones..." 
+                  value={descripcionEvento} 
+                  onChange={(e) => setDescripcionEvento(e.target.value)}
+                  style={{ width: '100%', padding: '10px', background: '#121212', color: '#fff', border: '1px solid #333', borderRadius: '6px', resize: 'vertical' }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '15px', marginBottom: '20px' }}>
+                <div>
+                  <label style={{ fontSize: '0.8rem', color: '#aaa', display: 'block', marginBottom: '5px' }}>Costo (₡ Colones)</label>
+                  <input 
+                    type="text" 
+                    placeholder="Ej. 15000" 
+                    value={costoEvento} 
+                    onChange={(e) => setCostoEvento(e.target.value)}
+                    style={{ width: '100%', padding: '10px', background: '#121212', color: '#fff', border: '1px solid #333', borderRadius: '6px' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.8rem', color: '#aaa', display: 'block', marginBottom: '5px' }}>Fecha Real del Evento</label>
+                  <input 
+                    type="date" 
+                    value={fechaRealEvento} 
+                    onChange={(e) => setFechaRealEvento(e.target.value)}
+                    required
+                    style={{ width: '100%', padding: '10px', background: '#121212', color: '#fff', border: '1px solid #333', borderRadius: '6px' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.8rem', color: '#aaa', display: 'block', marginBottom: '5px' }}>Fecha Límite de Pago</label>
+                  <input 
+                    type="date" 
+                    value={fechaLimitePago} 
+                    onChange={(e) => setFechaLimitePago(e.target.value)}
+                    style={{ width: '100%', padding: '10px', background: '#121212', color: '#fff', border: '1px solid #333', borderRadius: '6px' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ textAlign: 'right' }}>
+                <button 
+                  type="submit" 
+                  disabled={guardandoEvento}
+                  style={{ background: '#e63946', color: '#fff', border: 'none', padding: '12px 25px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
+                >
+                  {guardandoEvento ? '⏳ Publicando...' : '🚀 Publicar Evento Oficial'}
+                </button>
+              </div>
+            </form>
+
+            <h3 style={{ marginBottom: '15px', color: '#fff' }}>Eventos Activos Creados ({listaEventos.length})</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+              {listaEventos.map((ev) => (
+                <div key={ev.id} style={{ background: 'rgba(7, 17, 30, 0.9)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', padding: '20px' }}>
+                  <span style={{ background: '#3498db', color: '#fff', padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 'bold' }}>{ev.tipo}</span>
+                  <h4 style={{ margin: '8px 0 5px 0', color: '#fff', fontSize: '1.1rem' }}>{ev.titulo}</h4>
+                  <p style={{ margin: '0 0 10px 0', color: '#aaa', fontSize: '0.9rem' }}>{ev.descripcion}</p>
+                  <div style={{ display: 'flex', gap: '20px', fontSize: '0.8rem', color: '#f39c12' }}>
+                    <span>📅 Fecha: {ev.fechaReal}</span>
+                    <span>💰 Costo: ₡{ev.costo}</span>
+                    <span>⏳ Límite de Pago: {ev.fechaLimitePago}</span>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}

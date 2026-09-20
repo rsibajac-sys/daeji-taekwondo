@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { auth, db } from '../firebase/config';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc, updateDoc, collection, getDocs } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, collection, getDocs, addDoc } from 'firebase/firestore';
 import logoDaeji from '../assets/logo-letras.png';
 
 export default function Expediente() {
@@ -12,8 +12,12 @@ export default function Expediente() {
   const [cargando, setCargando] = useState(true);
   const [subiendoFoto, setSubiendoFoto] = useState(false);
 
-  // Pestaña activa: 'inicio', 'asistencia', 'competencias', 'info'
+  // Pestaña activa principal: 'inicio', 'asistencia', 'competencias', 'material', 'info'
   const [pestanaExpediente, setPestanaExpediente] = useState('inicio');
+
+  // Estados para Eventos y Convocatorias
+  const [listaEventos, setListaEventos] = useState([]);
+  const [inscripcionesAlumno, setInscripcionesAlumno] = useState([]);
 
   // Estados para KPIs y Desglose de Asistencia
   const [estadisticasAsistencia, setEstadisticasAsistencia] = useState({
@@ -43,6 +47,14 @@ export default function Expediente() {
   const [filtroFechaFin, setFiltroFechaFin] = useState('');
   const [tiposSeleccionados, setTiposSeleccionados] = useState(['G2', 'G4', 'JDN', 'Internacional', 'Amistoso']);
 
+  // Estados para la Biblioteca Interactiva de Material de Estudio
+  const [gradoSeleccionadoBiblioteca, setGradoSeleccionadoBiblioteca] = useState(null);
+  const [subPestanaMaterial, setSubPestanaMaterial] = useState('videos'); // 'videos', 'notas', 'quiz'
+  const [notaPersonal, setNotaPersonal] = useState('');
+  const [notasGuardadas, setNotasGuardadas] = useState({});
+  const [respuestaQuiz, setRespuestaQuiz] = useState({});
+  const [resultadoQuiz, setResultadoQuiz] = useState({});
+
   const navigate = useNavigate();
 
   const categoriasWTFDisponibles = [
@@ -53,11 +65,32 @@ export default function Expediente() {
     "Poomsae Individual", "Poomsae Parejas", "Poomsae Team"
   ];
 
+  // Jerarquía de Grados para el Material de Estudio Acumulativo
+  const jerarquiaGrados = [
+    { id: 'blanco', nombre: 'Cinturón Blanco', gup: 10, etiqueta: 'Blanco (10° Gup)', colorBadge: '#ecf0f1', colorTexto: '#2c3e50' },
+    { id: 'blanco_amarillo', nombre: 'Cinturón Blanco-Amarillo', gup: 9, etiqueta: 'Blanco-Amarillo (9° Gup)', colorBadge: '#f1c40f', colorTexto: '#2c3e50' },
+    { id: 'amarillo', nombre: 'Cinturón Amarillo', gup: 8, etiqueta: 'Amarillo (8° Gup)', colorBadge: '#f39c12', colorTexto: '#fff' },
+    { id: 'amarillo_naranja', nombre: 'Cinturón Amarillo-Naranja', gup: 8, etiqueta: 'Amarillo-Naranja (8° Gup)', colorBadge: '#e67e22', colorTexto: '#fff' },
+    { id: 'naranja', nombre: 'Cinturón Naranja', gup: 7, etiqueta: 'Naranja (7° Gup)', colorBadge: '#d35400', colorTexto: '#fff' },
+    { id: 'amarillo_verde', nombre: 'Cinturón Amarillo-Verde', gup: 7, etiqueta: 'Amarillo-Verde (7° Gup)', colorBadge: '#27ae60', colorTexto: '#fff' },
+    { id: 'verde', nombre: 'Cinturón Verde', gup: 6, etiqueta: 'Verde (6° Gup)', colorBadge: '#2ecc71', colorTexto: '#2c3e50' },
+    { id: 'verde_azul', nombre: 'Cinturón Verde-Azul', gup: 5, etiqueta: 'Verde-Azul (5° Gup)', colorBadge: '#16a085', colorTexto: '#fff' },
+    { id: 'azul', nombre: 'Cinturón Azul', gup: 4, etiqueta: 'Azul (4° Gup)', colorBadge: '#3498db', colorTexto: '#fff' },
+    { id: 'azul_rojo', nombre: 'Cinturón Azul-Rojo', gup: 3, etiqueta: 'Azul-Rojo (3° Gup)', colorBadge: '#2980b9', colorTexto: '#fff' },
+    { id: 'rojo', nombre: 'Cinturón Rojo', gup: 2, etiqueta: 'Rojo (2° Gup)', colorBadge: '#e74c3c', colorTexto: '#fff' },
+    { id: 'rojo_negro', nombre: 'Cinturón Rojo-Negro', gup: 1, etiqueta: 'Rojo-Negro (1° Gup)', colorBadge: '#c0392b', colorTexto: '#fff' },
+    { id: 'negro_1', nombre: 'Cinturón Negro 1er Dan', gup: 0, etiqueta: 'Negro 1er Dan', colorBadge: '#34495e', colorTexto: '#fff' },
+    { id: 'negro_2', nombre: 'Cinturón Negro 2do Dan', gup: -1, etiqueta: 'Negro 2do Dan', colorBadge: '#2c3e50', colorTexto: '#fff' },
+    { id: 'negro_3', nombre: 'Cinturón Negro 3er Dan', gup: -2, etiqueta: 'Negro 3er Dan', colorBadge: '#1a252f', colorTexto: '#fff' },
+    { id: 'negro_4', nombre: 'Cinturón Negro 4to Dan', gup: -3, etiqueta: 'Negro 4to Dan', colorBadge: '#000000', colorTexto: '#fff' }
+  ];
+
   useEffect(() => {
     const observador = onAuthStateChanged(auth, async (usuarioActual) => {
       if (usuarioActual) {
         setUsuario(usuarioActual);
         await cargarDatosAtletaYAsistencia(id);
+        await cargarEventosYInscripciones(id);
       } else {
         navigate('/login');
       }
@@ -79,6 +112,13 @@ export default function Expediente() {
       const datosAtleta = { id: docSnap.id, ...docSnap.data() };
       setAtleta(datosAtleta);
       setListaCompetencias(datosAtleta.competencias || []);
+      if (datosAtleta.notasEstudio) {
+        setNotasGuardadas(datosAtleta.notasEstudio);
+      }
+
+      // Establecer por defecto el grado actual en la biblioteca interactiva
+      const gradoAtleta = datosAtleta.disciplina?.grado || 'Cinturón Blanco';
+      setGradoSeleccionadoBiblioteca(gradoAtleta);
 
       const queryAsistencias = await getDocs(collection(db, 'asistencias'));
       const registrosAlumno = [];
@@ -143,6 +183,84 @@ export default function Expediente() {
     }
   };
 
+  const cargarEventosYInscripciones = async (idAtleta) => {
+    try {
+      const snapEventos = await getDocs(collection(db, 'eventos'));
+      const eventosTemp = [];
+      snapEventos.forEach(d => eventosTemp.push({ id: d.id, ...d.data() }));
+      setListaEventos(eventosTemp);
+
+      const snapInsc = await getDocs(collection(db, 'inscripciones_eventos'));
+      const inscTemp = [];
+      snapInsc.forEach(d => {
+        const dat = d.data();
+        if (dat.atletaId === idAtleta) inscTemp.push(dat.eventoId);
+      });
+      setInscripcionesAlumno(inscTemp);
+    } catch (err) {
+      console.error("Error cargando eventos:", err);
+    }
+  };
+
+  const inscribirseAEvento = async (evento) => {
+    if (inscripcionesAlumno.includes(evento.id)) {
+      alert("ℹ️ Ya te encuentras inscrito en este evento.");
+      return;
+    }
+
+    if (estadisticasAsistencia.porcentajeSemestral < 80) {
+      alert(`⚠️ REQUISITO NO CUMPLIDO:\nTu asistencia semestral es de ${estadisticasAsistencia.porcentajeSemestral}%. Se requiere un mínimo de 80%.\n\nPor favor, comunícate con el Master Roberto Sibaja para solicitar una aprobación especial.`);
+      return;
+    }
+
+    const fechaIngresoStr = atleta.disciplina?.fechaIngresoDaeji;
+    if (fechaIngresoStr) {
+      const fechaIngreso = new Date(fechaIngresoStr + 'T00:00:00');
+      const hoy = new Date();
+      const mesesAntiguedad = (hoy.getFullYear() - fechaIngreso.getFullYear()) * 12 + (hoy.getMonth() - fechaIngreso.getMonth());
+      if (mesesAntiguedad < 6) {
+        alert(`⚠️ REQUISITO NO CUMPLIDO:\nNecesitas al menos 6 meses de antigüedad en la academia para este evento (tienes aprox. ${mesesAntiguedad} meses).\n\nComunícate con el Master Roberto Sibaja para una autorización especial.`);
+        return;
+      }
+    }
+
+    if (atleta.estado === 'Inactivo') {
+      alert(`⚠️ REQUISITO NO CUMPLIDO:\nTu estado actual figura como Inactivo o tienes pagos pendientes. Comunícate con la administración.`);
+      return;
+    }
+
+    try {
+      await addDoc(collection(db, 'inscripciones_eventos'), {
+        eventoId: evento.id,
+        eventoTitulo: evento.titulo,
+        atletaId: atleta.id,
+        atletaNombre: `${atleta.nombre1} ${atleta.apellido1}`,
+        gradoAtleta: atleta.disciplina?.grado || 'Cinturón Blanco',
+        fechaInscripcion: new Date().toISOString()
+      });
+
+      setInscripcionesAlumno([...inscripcionesAlumno, evento.id]);
+      alert(`🎉 ¡Inscripción exitosa a "${evento.titulo}"!\nTus datos se han registrado correctamente.`);
+    } catch (error) {
+      console.error("Error al inscribirse:", error);
+      alert("❌ Ocurrió un error al procesar la inscripción.");
+    }
+  };
+
+  // Guardar nota personal del alumno en Firebase
+  const guardarNotaEstudio = async (gradoKey) => {
+    try {
+      const nuevasNotas = { ...notasGuardadas, [gradoKey]: notaPersonal };
+      const docRef = doc(db, 'atletas', id);
+      await updateDoc(docRef, { notasEstudio: nuevasNotas });
+      setNotasGuardadas(nuevasNotas);
+      alert("✅ ¡Anotación guardada en tu expediente con éxito!");
+    } catch (err) {
+      console.error("Error al guardar nota:", err);
+      alert("❌ Error al guardar la anotación.");
+    }
+  };
+
   const calcularPuntos = (tipo, posicion) => {
     let base = 0;
     if (posicion === '1') base = 20;
@@ -203,7 +321,6 @@ export default function Expediente() {
     }
   };
 
-  // Obtener lista única de nombres de rivales ya existentes en la base de datos del atleta
   const obtenerNombresRivalesExistentes = () => {
     const nombresSet = new Set();
     listaCompetencias.forEach(comp => {
@@ -223,7 +340,6 @@ export default function Expediente() {
 
   const listaRivalesBD = obtenerNombresRivalesExistentes();
 
-  // Filtrado de competencias personales del atleta
   const competenciasFiltradasPersonal = listaCompetencias.filter(comp => {
     const cumpleTipo = tiposSeleccionados.includes(comp.tipo);
     const cumpleFechaInicio = filtroFechaInicio ? comp.fecha >= filtroFechaInicio : true;
@@ -235,10 +351,8 @@ export default function Expediente() {
     competenciasFiltradasPersonal.reduce((acc, curr) => acc + (Number(curr.puntos) || 0), 0).toFixed(2)
   );
 
-  // ANÁLISIS AUTOMÁTICO DE RIVALES DE LAS LLAVES FILTRADAS
   const calcularRankingRivalesDeLlaves = () => {
     const acumuladorRivales = {};
-
     competenciasFiltradasPersonal.forEach(comp => {
       const participantes = comp.participantesLlave || [];
       participantes.forEach(part => {
@@ -248,11 +362,7 @@ export default function Expediente() {
           const puntosRival = calcularPuntos(comp.tipo, lugarRival);
 
           if (!acumuladorRivales[nombreRival]) {
-            acumuladorRivales[nombreRival] = {
-              nombre: nombreRival,
-              torneosEnfrentados: 0,
-              puntosTotales: 0
-            };
+            acumuladorRivales[nombreRival] = { nombre: nombreRival, torneosEnfrentados: 0, puntosTotales: 0 };
           }
           acumuladorRivales[nombreRival].torneosEnfrentados += 1;
           acumuladorRivales[nombreRival].puntosTotales = parseFloat(
@@ -261,7 +371,6 @@ export default function Expediente() {
         }
       });
     });
-
     return Object.values(acumuladorRivales).sort((a, b) => b.puntosTotales - a.puntosTotales);
   };
 
@@ -316,6 +425,16 @@ export default function Expediente() {
     if (porcentaje >= 60) return '#f39c12';
     return '#e74c3c';
   };
+
+  // Filtrar grados acumulativos permitidos para el alumno
+  const gradoActualAtleta = atleta.disciplina?.grado || 'Cinturón Blanco';
+  const indexGradoActual = jerarquiaGrados.findIndex(g => g.nombre.toLowerCase() === gradoActualAtleta.toLowerCase());
+  const gradosDisponiblesAcumulados = indexGradoActual !== -1 
+    ? jerarquiaGrados.slice(0, indexGradoActual + 1) 
+    : jerarquiaGrados.slice(0, 1);
+
+  // Asegurar que haya un grado seleccionado por defecto en la biblioteca
+  const gradoActualBiblioteca = gradosDisponiblesAcumulados.find(g => g.nombre === gradoSeleccionadoBiblioteca) || gradosDisponiblesAcumulados[gradosDisponiblesAcumulados.length - 1];
 
   return (
     <div style={{ minHeight: '100vh', background: '#0a192f', color: '#fff', fontFamily: 'sans-serif', paddingBottom: '50px' }}>
@@ -395,6 +514,12 @@ export default function Expediente() {
             🏆 Historial Competencias & Ranking
           </button>
           <button 
+            onClick={() => setPestanaExpediente('material')}
+            style={{ padding: '10px 18px', borderRadius: '8px', border: 'none', fontWeight: 'bold', cursor: 'pointer', background: pestanaExpediente === 'material' ? '#e63946' : 'rgba(255,255,255,0.05)', color: pestanaExpediente === 'material' ? '#fff' : '#aaa' }}
+          >
+            🥋 Academia & Material Virtual
+          </button>
+          <button 
             onClick={() => setPestanaExpediente('info')}
             style={{ padding: '10px 18px', borderRadius: '8px', border: 'none', fontWeight: 'bold', cursor: 'pointer', background: pestanaExpediente === 'info' ? '#e63946' : 'rgba(255,255,255,0.05)', color: pestanaExpediente === 'info' ? '#fff' : '#aaa' }}
           >
@@ -404,18 +529,57 @@ export default function Expediente() {
 
         {/* PESTAÑA 1: INICIO */}
         {pestanaExpediente === 'inicio' && (
-          <div style={{ background: 'rgba(7, 17, 30, 0.85)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '30px' }}>
-            <h3 style={{ marginTop: 0, color: '#fff', fontSize: '1.4rem' }}>¡Bienvenido al Panel de Atleta, {atleta.nombre1}!</h3>
-            <p style={{ color: '#aaa', lineHeight: '1.6' }}>
-              Este es tu espacio personal dentro de la Escuela de Taekwondo DAEJI. Aquí podrás consultar tus porcentajes de asistencia para derecho a examen, tu acumulación de puntos en el ranking oficial de competencias y tus datos generales de expediente.
-            </p>
-
-            <div style={{ marginTop: '25px', background: 'rgba(230, 57, 70, 0.1)', border: '1px solid rgba(230, 57, 70, 0.3)', padding: '20px', borderRadius: '10px' }}>
-              <h4 style={{ margin: '0 0 8px 0', color: '#e63946' }}>📢 Anuncios Importantes de la Academia</h4>
-              <p style={{ margin: 0, fontSize: '0.9rem', color: '#ddd' }}>
-                Próximo torneo evaluatorio rumbo a los Juegos Deportivos Nacionales. Asegúrate de mantener tu porcentaje de asistencia semestral por encima del 80% para habilitar tu inscripción.
+          <div>
+            <div style={{ background: 'rgba(7, 17, 30, 0.85)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '30px', marginBottom: '30px' }}>
+              <h3 style={{ marginTop: 0, color: '#fff', fontSize: '1.4rem' }}>¡Bienvenido al Panel de Atleta, {atleta.nombre1}!</h3>
+              <p style={{ color: '#aaa', lineHeight: '1.6' }}>
+                Este es tu espacio personal dentro de la Escuela de Taekwondo DAEJI. Aquí podrás consultar tus porcentajes de asistencia para derecho a examen, tu acumulación de puntos en el ranking oficial de competencias y tus datos generales de expediente.
               </p>
             </div>
+
+            {/* SECCIÓN DE EVENTOS Y CONVOCATORIAS ACTIVAS */}
+            <h3 style={{ color: '#fff', marginBottom: '15px' }}>🏆 Convocatorias y Exámenes Disponibles</h3>
+            {listaEventos.length === 0 ? (
+              <p style={{ color: '#888', fontStyle: 'italic' }}>No hay eventos o exámenes publicados en este momento.</p>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
+                {listaEventos.map((ev) => {
+                  const yaInscrito = inscripcionesAlumno.includes(ev.id);
+                  return (
+                    <div key={ev.id} style={{ background: 'rgba(7, 17, 30, 0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                      <div>
+                        <span style={{ background: '#3498db', color: '#fff', padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 'bold' }}>{ev.tipo}</span>
+                        <h4 style={{ margin: '10px 0 8px 0', color: '#fff', fontSize: '1.15rem' }}>{ev.titulo}</h4>
+                        <p style={{ margin: '0 0 15px 0', color: '#aaa', fontSize: '0.9rem', lineHeight: '1.4' }}>{ev.descripcion}</p>
+                        
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '0.85rem', color: '#f39c12', marginBottom: '20px' }}>
+                          <span>📅 Fecha del Evento: {ev.fechaReal}</span>
+                          <span>💰 Costo: ₡{ev.costo}</span>
+                          <span>⏳ Límite de Pago: {ev.fechaLimitePago}</span>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => inscribirseAEvento(ev)}
+                        style={{
+                          background: yaInscrito ? '#27ae60' : '#e63946',
+                          color: '#fff',
+                          border: 'none',
+                          padding: '12px',
+                          borderRadius: '8px',
+                          fontWeight: 'bold',
+                          cursor: yaInscrito ? 'default' : 'pointer',
+                          width: '100%'
+                        }}
+                        disabled={yaInscrito}
+                      >
+                        {yaInscrito ? '✅ Inscrito Correctamente' : '📝 Inscribirme / Aceptar'}
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         )}
 
@@ -629,7 +793,190 @@ export default function Expediente() {
           </div>
         )}
 
-        {/* PESTAÑA 4: INFORMACIÓN GENERAL */}
+        {/* PESTAÑA 4: ACADEMIA & MATERIAL VIRTUAL INTERACTIVO */}
+        {pestanaExpediente === 'material' && (
+          <div style={{ background: 'rgba(7, 17, 30, 0.85)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '25px' }}>
+            <h3 style={{ marginTop: 0, color: '#fff', fontSize: '1.3rem' }}>🥋 Dojo Virtual & Biblioteca de Dominio Técnico</h3>
+            <p style={{ color: '#aaa', marginBottom: '20px', fontSize: '0.9rem' }}>
+              Selecciona tu cinturón en el carrusel inferior para acceder a las clases en video, guardar tus notas de entrenamiento o poner a prueba tus conocimientos con evaluaciones interactivas.
+            </p>
+
+            {/* CARRUSEL HORIZONTAL DE CINTURONES DESBLOQUEADOS */}
+            <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '15px', marginBottom: '25px', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+              {gradosDisponiblesAcumulados.map((g) => {
+                const activo = gradoActualBiblioteca.nombre === g.nombre;
+                return (
+                  <button
+                    key={g.id}
+                    onClick={() => {
+                      setGradoSeleccionadoBiblioteca(g.nombre);
+                      setNotaPersonal(notasGuardadas[g.nombre] || '');
+                    }}
+                    style={{
+                      padding: '10px 16px',
+                      borderRadius: '10px',
+                      border: activo ? '2px solid #e63946' : '1px solid rgba(255,255,255,0.1)',
+                      background: activo ? 'rgba(230, 57, 70, 0.15)' : 'rgba(255,255,255,0.03)',
+                      color: '#fff',
+                      fontWeight: 'bold',
+                      cursor: 'pointer',
+                      whiteSpace: 'nowrap',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px'
+                    }}
+                  >
+                    <span style={{ width: '12px', height: '12px', borderRadius: '50%', background: g.colorBadge, display: 'inline-block', border: '1px solid #fff' }}></span>
+                    {g.etiqueta}
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* CONTENIDO DEL GRADO SELECCIONADO */}
+            {gradoActualBiblioteca && (
+              <div style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '15px' }}>
+                  <h4 style={{ margin: 0, color: '#f39c12', fontSize: '1.2rem' }}>
+                    Módulo Activo: {gradoActualBiblioteca.etiqueta}
+                  </h4>
+                  
+                  {/* SUBPESTAÑAS INTERNAS DE LA TARJETA */}
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button 
+                      onClick={() => setSubPestanaMaterial('videos')}
+                      style={{ background: subPestanaMaterial === 'videos' ? '#3498db' : 'rgba(255,255,255,0.05)', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 'bold', cursor: 'pointer' }}
+                    >
+                      🎥 Videos y Poomsae
+                    </button>
+                    <button 
+                      onClick={() => {
+                        setSubPestanaMaterial('notas');
+                        setNotaPersonal(notasGuardadas[gradoActualBiblioteca.nombre] || '');
+                      }}
+                      style={{ background: subPestanaMaterial === 'notas' ? '#3498db' : 'rgba(255,255,255,0.05)', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 'bold', cursor: 'pointer' }}
+                    >
+                      📝 Mis Notas Técnicas
+                    </button>
+                    <button 
+                      onClick={() => setSubPestanaMaterial('quiz')}
+                      style={{ background: subPestanaMaterial === 'quiz' ? '#3498db' : 'rgba(255,255,255,0.05)', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 'bold', cursor: 'pointer' }}
+                    >
+                      ⚡ Reto / Quiz en Vivo
+                    </button>
+                  </div>
+                </div>
+
+                {/* 1. VISTA DE VIDEOS Y MANUALES */}
+                {subPestanaMaterial === 'videos' && (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '15px' }}>
+                    <div style={{ background: 'rgba(255,255,255,0.03)', padding: '15px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                      <div style={{ background: '#111', height: '150px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '10px', border: '1px dashed #444' }}>
+                        <span style={{ fontSize: '2rem' }}>▶️</span>
+                      </div>
+                      <h5 style={{ margin: '0 0 5px 0', color: '#fff' }}>Forma Oficial ({gradoActualBiblioteca.nombre})</h5>
+                      <p style={{ margin: 0, fontSize: '0.8rem', color: '#aaa' }}>Video demostrativo paso a paso con ángulos frontal y lateral.</p>
+                    </div>
+
+                    <div style={{ background: 'rgba(255,255,255,0.03)', padding: '15px', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.06)' }}>
+                      <div style={{ background: '#111', height: '150px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '10px', border: '1px dashed #444' }}>
+                        <span style={{ fontSize: '2rem' }}>📄</span>
+                      </div>
+                      <h5 style={{ margin: '0 0 5px 0', color: '#fff' }}>Manual Teórico y Terminología Coreana</h5>
+                      <p style={{ margin: 0, fontSize: '0.8rem', color: '#aaa' }}>Glosario de patadas, bloqueos y posturas obligatorias.</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* 2. VISTA DE ANOTACIONES PERSONALES */}
+                {subPestanaMaterial === 'notas' && (
+                  <div>
+                    <p style={{ fontSize: '0.85rem', color: '#ccc', marginBottom: '10px' }}>
+                      Escribe tus apuntes personales, correcciones del profesor o detalles que debas pulir para tu examen de <strong style={{color: '#f39c12'}}>{gradoActualBiblioteca.nombre}</strong>:
+                    </p>
+                    <textarea 
+                      rows="5"
+                      value={notaPersonal}
+                      onChange={(e) => setNotaPersonal(e.target.value)}
+                      placeholder="Ej: Mantener la pierna de apoyo más flexionada en el giro, levantar la rodilla antes del golpe..."
+                      style={{ width: '100%', padding: '12px', background: '#121212', color: '#fff', border: '1px solid #444', borderRadius: '8px', fontSize: '0.9rem', marginBottom: '10px', boxSizing: 'border-box' }}
+                    />
+                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                      <button 
+                        onClick={() => guardarNotaEstudio(gradoActualBiblioteca.nombre)}
+                        style={{ background: '#2ecc71', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
+                      >
+                        💾 Guardar Mis Notas
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* 3. VISTA DE EVALUACIÓN INTERACTIVA EN VIVO (QUIZ) */}
+                {subPestanaMaterial === 'quiz' && (
+                  <div>
+                    <h5 style={{ margin: '0 0 10px 0', color: '#2ecc71', fontSize: '1rem' }}>⚡ Evaluación Rápida de Conocimiento</h5>
+                    <p style={{ fontSize: '0.85rem', color: '#aaa', marginBottom: '15px' }}>
+                      Responde la siguiente pregunta de práctica para afianzar tu nivel técnico:
+                    </p>
+
+                    <div style={{ background: 'rgba(255,255,255,0.02)', padding: '15px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
+                      <p style={{ margin: '0 0 10px 0', fontWeight: 'bold', color: '#fff' }}>
+                        1. ¿Cómo se le denomina en coreano a la "Patada Circular" o "Giro"?
+                      </p>
+                      
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '15px' }}>
+                        {['Ap Chagui', 'Dollyo Chagui', 'Yop Chagui', 'Dwit Chagui'].map((opcion, idx) => (
+                          <label key={idx} style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', fontSize: '0.9rem', color: '#ddd' }}>
+                            <input 
+                              type="radio" 
+                              name="pregunta1" 
+                              checked={respuestaQuiz[gradoActualBiblioteca.nombre] === opcion}
+                              onChange={() => setRespuestaQuiz({ ...respuestaQuiz, [gradoActualBiblioteca.nombre]: opcion })} 
+                            />
+                            {opcion}
+                          </label>
+                        ))}
+                      </div>
+
+                      <button 
+                        onClick={() => {
+                          const resp = respuestaQuiz[gradoActualBiblioteca.nombre];
+                          if (!resp) {
+                            alert("Selecciona una opción primero.");
+                            return;
+                          }
+                          if (resp === 'Dollyo Chagui') {
+                            setResultadoQuiz({ ...resultadoQuiz, [gradoActualBiblioteca.nombre]: 'correcto' });
+                          } else {
+                            setResultadoQuiz({ ...resultadoQuiz, [gradoActualBiblioteca.nombre]: 'incorrecto' });
+                          }
+                        }}
+                        style={{ background: '#3498db', color: '#fff', border: 'none', padding: '8px 16px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.85rem' }}
+                      >
+                        Comprobar Respuesta
+                      </button>
+
+                      {resultadoQuiz[gradoActualBiblioteca.nombre] === 'correcto' && (
+                        <p style={{ marginTop: '10px', color: '#2ecc71', fontWeight: 'bold', fontSize: '0.9rem' }}>
+                          🎉 ¡Correcto! Excelente dominio de la terminología.
+                        </p>
+                      )}
+                      {resultadoQuiz[gradoActualBiblioteca.nombre] === 'incorrecto' && (
+                        <p style={{ marginTop: '10px', color: '#e74c3c', fontWeight: 'bold', fontSize: '0.9rem' }}>
+                          ❌ Incorrecto. Sigue repasando el manual teórico.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* PESTAÑA 5: INFORMACIÓN GENERAL */}
         {pestanaExpediente === 'info' && (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
             <div style={{ background: 'rgba(7, 17, 30, 0.85)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '12px', padding: '20px' }}>
