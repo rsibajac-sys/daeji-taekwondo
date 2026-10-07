@@ -9,6 +9,7 @@ import Expediente from './pages/Expediente';
 import MasterDashboard from './pages/MasterDashboard';
 import Asistencia from './pages/Asistencia';
 import Pagos from './pages/Pagos';
+import ConfiguracionAula from './pages/ConfiguracionAula'; // <-- 1. Asegúrate de importar la vista
 
 function App() {
   return (
@@ -25,6 +26,7 @@ function App() {
         <Route path="/master" element={<MasterDashboard />} />
         <Route path="/asistencia" element={<Asistencia />} />
         <Route path="/pagos" element={<Pagos />} /> {/* <-- 2. DEFINIR LA RUTA */}
+        <Route path="/master-aula" element={<ConfiguracionAula />} />
       </Routes>
     </BrowserRouter>
   );

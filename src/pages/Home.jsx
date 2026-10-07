@@ -89,6 +89,7 @@ export default function Home() {
       eventoPrincipal: 'Juegos Deportivos Nacionales',
       otrosLogros: [
         'Campeón Absoluto 2025 categoria -48 kg',
+        'Campeón Universitario 2026 categoria -52 kg',
         'Sub Campeón JDN Nicoya 2024',
         'Seleccionado Nacional',
       ],
