@@ -6,21 +6,28 @@ import { collection, addDoc, query, where, getDocs, setDoc, doc, getDoc, updateD
 import Papa from 'papaparse';
 import logoDaeji from '../assets/logo-letras.png';
 
+// Importamos las vistas independientes
+import MasterInicio from '../master/MasterInicio';
+import MasterGestionAtletas from '../master/MasterGestionAtletas';
+import MasterEventos from '../master/MasterEventos';
+import MasterRoles from '../master/MasterRoles';
+import MasterMigracion from '../master/MasterMigracion';
+
 export default function MasterDashboard() {
   const [usuario, setUsuario] = useState(null);
-  
   const [seccionActiva, setSeccionActiva] = useState('inicio');
+  const [menuAbiertoMovil, setMenuAbiertoMovil] = useState(false);
+  
   const [totalAtletas, setTotalAtletas] = useState(0);
   const [atletasActivos, setAtletasActivos] = useState(0);
   const [atletasInactivos, setAtletasInactivos] = useState(0);
   const [listaAtletasGlobal, setListaAtletasGlobal] = useState([]);
-  const [busquedaAtleta, setBusquedaAtleta] = useState('');
   const [guardandoMasivoAtletas, setGuardandoMasivoAtletas] = useState(false);
 
-  // Estados para Gestión de Eventos y Convocatorias
+  // Estados para Eventos
   const [listaEventos, setListaEventos] = useState([]);
   const [tituloEvento, setTituloEvento] = useState('');
-  const [tipoEvento, setTipoEvento] = useState('Examen'); // Examen, Capacitación, Exhibición, Torneo
+  const [tipoEvento, setTipoEvento] = useState('Examen');
   const [descripcionEvento, setDescripcionEvento] = useState('');
   const [costoEvento, setCostoEvento] = useState('0');
   const [fechaInicioVisibilidad, setFechaInicioVisibilidad] = useState('');
@@ -34,28 +41,31 @@ export default function MasterDashboard() {
   const [procesando, setProcesando] = useState(false);
   const [progreso, setProgreso] = useState('');
 
-  // Estados para Gestión de Roles y Permisos por Tutor
+  // Estados para Roles
   const [listaTutores, setListaTutores] = useState([]);
   const [tutorSeleccionado, setTutorSeleccionado] = useState('');
   const [permisosTutor, setPermisosTutor] = useState({
+    gestionAtletas: false,
     asistencias: false,
     pagos: false,
     expedientes: false,
     evaluaciones: false,
-    competencias: false
+    competencias: false,
+    eventos: false,
   });
   const [cargandoRoles, setCargandoRoles] = useState(false);
 
   const modulosDisponibles = [
-    { id: 'asistencias', label: '📋 Control de Asistencias' },
-    { id: 'pagos', label: '💰 Gestión de Pagos / Financiero' },
-    { id: 'expedientes', label: '🥋 Expediente de Atletas' },
-    { id: 'evaluaciones', label: '📝 Evaluaciones y Exámenes' },
-    { id: 'competencias', label: '🏆 Historial de Competencias' }
+    { id: 'gestionAtletas', label: 'Gestión Global de Atletas' },
+    { id: 'asistencias', label: 'Control de Asistencias' },
+    { id: 'pagos', label: 'Gestión de Pagos / Financiero' },
+    { id: 'expedientes', label: 'Expediente de Atletas' },
+    { id: 'evaluaciones', label: 'Evaluaciones y Exámenes' },
+    { id: 'competencias', label: 'Historial de Competencias' },
+    { id: 'eventos', label: 'Convocatorias y Eventos (Master)' },
   ];
 
   const navigate = useNavigate();
-  const diasSemanaDisponibles = ["Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábados", "Domingo"];
 
   useEffect(() => {
     const observador = onAuthStateChanged(auth, async (usuarioActual) => {
@@ -71,19 +81,15 @@ export default function MasterDashboard() {
     return () => observador();
   }, [navigate]);
 
-  // Función ultra-robusta para calcular la edad buscando en todas las variantes de Firestore
   const calcularEdad = (atletaData) => {
     const valorFecha = atletaData.fechaNacimiento || atletaData.nacimiento || atletaData.fechaNac || atletaData.fechanac;
     if (!valorFecha) return 0;
     let nacimiento;
-
     if (typeof valorFecha === 'string') {
       let fechaLimpia = valorFecha.trim();
       if (fechaLimpia.includes('/')) {
         const partes = fechaLimpia.split('/');
-        if (partes.length === 3) {
-          fechaLimpia = `${partes[2]}-${partes[1]}-${partes[0]}`;
-        }
+        if (partes.length === 3) fechaLimpia = `${partes[2]}-${partes[1]}-${partes[0]}`;
       }
       nacimiento = new Date(fechaLimpia.includes('T') ? fechaLimpia : fechaLimpia + 'T00:00:00');
     } else if (valorFecha.seconds) {
@@ -93,20 +99,16 @@ export default function MasterDashboard() {
     } else {
       return 0;
     }
-
     if (isNaN(nacimiento.getTime())) return 0;
-
     const hoy = new Date();
     let edad = hoy.getFullYear() - nacimiento.getFullYear();
     const m = hoy.getMonth() - nacimiento.getMonth();
-    if (m < 0 || (m === 0 && hoy.getDate() < nacimiento.getDate())) {
-      edad--;
-    }
+    if (m < 0 || (m === 0 && hoy.getDate() < nacimiento.getDate())) edad--;
     return edad >= 0 ? edad : 0;
   };
 
   const obtenerCategoriaPorEdad = (edad) => {
-    if (edad >= 3 && edad <= 7) return 'Pewwe';
+    if (edad >= 3 && edad < 7) return 'Pewwe';
     if (edad >= 8 && edad <= 11) return 'Infantiles';
     if (edad >= 12 && edad <= 17) return 'Juveniles';
     if (edad >= 18) return 'Mayores';
@@ -117,26 +119,18 @@ export default function MasterDashboard() {
     try {
       const querySnapshot = await getDocs(collection(db, 'atletas'));
       setTotalAtletas(querySnapshot.size);
-      
       const atletas = [];
       let activosCount = 0;
       let inactivosCount = 0;
-
       querySnapshot.forEach((docSnap) => {
         const data = docSnap.data();
         const estado = data.estado || 'Activo';
-        
-        if (estado === 'Inactivo') {
-          inactivosCount++;
-        } else {
-          activosCount++;
-        }
-
+        if (estado === 'Inactivo') inactivosCount++;
+        else activosCount++;
         const edad = calcularEdad(data);
         const categoria = obtenerCategoriaPorEdad(edad);
         atletas.push({ id: docSnap.id, ...data, estado, edad, categoria });
       });
-
       setAtletasActivos(activosCount);
       setAtletasInactivos(inactivosCount);
       setListaAtletasGlobal(atletas);
@@ -149,17 +143,12 @@ export default function MasterDashboard() {
     try {
       const querySnapshot = await getDocs(collection(db, 'atletas'));
       const correosUnicos = new Set();
-      
       querySnapshot.forEach((docSnap) => {
         const data = docSnap.data();
-        if (data.tutorEmail) {
-          correosUnicos.add(data.tutorEmail);
-        }
+        if (data.tutorEmail) correosUnicos.add(data.tutorEmail);
       });
-
       correosUnicos.add('prischernandez15@gmail.com');
       correosUnicos.add('rsibajac@gmail.com');
-
       setListaTutores(Array.from(correosUnicos));
     } catch (error) {
       console.error("Error al cargar tutores:", error);
@@ -185,7 +174,6 @@ export default function MasterDashboard() {
       alert("⚠️ Por favor completa al menos el título y la fecha del evento.");
       return;
     }
-
     setGuardandoEvento(true);
     try {
       const nuevoEventoData = {
@@ -199,10 +187,8 @@ export default function MasterDashboard() {
         fechaLimitePago: fechaLimitePago || fechaRealEvento,
         creadoEn: new Date()
       };
-
       await addDoc(collection(db, 'eventos'), nuevoEventoData);
       alert("✅ ¡Evento o convocatoria creado con éxito y visible para los atletas!");
-      
       setTituloEvento('');
       setDescripcionEvento('');
       setCostoEvento('0');
@@ -210,7 +196,6 @@ export default function MasterDashboard() {
       setFechaFinVisibilidad('');
       setFechaRealEvento('');
       setFechaLimitePago('');
-      
       await cargarEventos();
     } catch (error) {
       console.error("Error al crear evento:", error);
@@ -228,13 +213,12 @@ export default function MasterDashboard() {
       const idDoc = correo.replace(/[@.]/g, '_');
       const docRef = doc(db, 'roles_usuarios', idDoc);
       const docSnap = await getDoc(docRef);
-
       if (docSnap.exists()) {
         setPermisosTutor(docSnap.data().permisos || {
-          asistencias: false, pagos: false, expedientes: false, evaluaciones: false, competencias: false
+          gestionAtletas: false, asistencias: false, pagos: false, expedientes: false, evaluaciones: false, competencias: false, eventos: false
         });
       } else {
-        setPermisosTutor({ asistencias: false, pagos: false, expedientes: false, evaluaciones: false, competencias: false });
+        setPermisosTutor({ gestionAtletas: false, asistencias: false, pagos: false, expedientes: false, evaluaciones: false, competencias: false, eventos: false });
       }
     } catch (error) {
       console.error("Error al cargar permisos del tutor:", error);
@@ -248,17 +232,14 @@ export default function MasterDashboard() {
       alert("⚠️ Por favor selecciona un tutor primero.");
       return;
     }
-
     try {
       const idDoc = tutorSeleccionado.replace(/[@.]/g, '_');
       const docRef = doc(db, 'roles_usuarios', idDoc);
-      
       await setDoc(docRef, {
         correo: tutorSeleccionado,
         permisos: permisosTutor,
         actualizadoEn: new Date().toISOString()
       }, { merge: true });
-
       alert(`✅ Permisos actualizados con éxito para ${tutorSeleccionado}`);
     } catch (error) {
       console.error("Error al guardar permisos:", error);
@@ -284,13 +265,10 @@ export default function MasterDashboard() {
       return;
     }
     setSeccionActiva(seccion);
-    if (seccion === 'gestion') {
-      await cargarDatosGenerales();
-    } else if (seccion === 'roles') {
-      await cargarTutoresRegistrados();
-    } else if (seccion === 'eventos') {
-      await cargarEventos();
-    }
+    setMenuAbiertoMovil(false);
+    if (seccion === 'gestion') await cargarDatosGenerales();
+    else if (seccion === 'roles') await cargarTutoresRegistrados();
+    else if (seccion === 'eventos') await cargarEventos();
   };
 
   const manejarCambioLocalAtleta = (idAtleta, campo, valor) => {
@@ -330,6 +308,7 @@ export default function MasterDashboard() {
         await updateDoc(docRef, {
           estado: atleta.estado || 'Activo',
           financiera: {
+            ...atleta.financiera,
             tipoAlumno: atleta.financiera?.tipoAlumno || 'Regular',
             cuotaMensual: atleta.financiera?.cuotaMensual || '0'
           },
@@ -356,16 +335,15 @@ export default function MasterDashboard() {
       "fechaNacimiento", "telefono", "genero", "provincia", "canton", "distrito", "otrasSenas",
       "tipoSangre", "padecimientos", "lesiones", "contactoEmergencia", "telefonoEmergencia",
       "parentescoEmergencia", "grado", "otraAcademia", "nombreAcademiaAnterior",
-      "profesorAnterior", "tiempoAcademiaAnterior", "fechaIngresoDaeji", "diasEntreno", "tipoAlumno", "cuotaMensual"
+      "profesorAnterior", "tiempoAcademiaAnterior", "fechaIngresoDaeji", "diasEntreno",
+      "tipoAlumno", "cuotaMensual"
     ];
-
     const ejemploFila = [
       "tutor.ejemplo@correo.com", "Daeji2026*", "101110111", "Donovan", "Ramirez", "Esquivel",
       "2010-05-12", "88888888", "Masculino", "San José", "Tibás", "San Juan", "Costado este del parque",
-      "O+", "Ninguno", "Ninguna", "María Esquivel", "77777777", "Madre", "Cinturón Amarillo",
-      "No", "", "", "", "2024-01-15", "Lunes,Miércoles", "Regular", "25000"
+      "0+", "Ninguno", "Ninguna", "María Esquivel", "77777777", "Madre", "Cinturón Amarillo",
+      "No", "", "", "", "2024-01-15", "Lunes, Miércoles", "Regular", "25000"
     ];
-
     const contenidoCSV = [encabezados.join(","), ejemploFila.join(",")].join("\n");
     const blob = new Blob([contenidoCSV], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -382,10 +360,8 @@ export default function MasterDashboard() {
       alert("⚠️ Por favor selecciona primero un archivo CSV lleno.");
       return;
     }
-
     setProcesando(true);
     setProgreso("Leyendo archivo CSV...");
-
     Papa.parse(archivoSeleccionado, {
       header: true,
       skipEmptyLines: true,
@@ -394,20 +370,16 @@ export default function MasterDashboard() {
         let tutoresCreados = 0;
         let atletasRegistrados = 0;
         let totalOmitidos = 0;
-
         for (let i = 0; i < filas.length; i++) {
           const fila = filas[i];
           setProgreso(`Procesando registro ${i + 1} de ${filas.length}...`);
-
           try {
             const emailTutor = fila.tutorEmail ? fila.tutorEmail.trim() : '';
             const passwordTemp = fila.passwordTemporal ? fila.passwordTemporal.trim() : 'Daeji2026*';
-
             if (!emailTutor || !fila.cedula) {
               totalOmitidos++;
               continue;
             }
-
             try {
               await createUserWithEmailAndPassword(auth, emailTutor, passwordTemp);
               tutoresCreados++;
@@ -416,17 +388,13 @@ export default function MasterDashboard() {
                 console.warn(`Aviso Auth para ${emailTutor}:`, errorAuth.message);
               }
             }
-
             const qCedula = query(collection(db, 'atletas'), where('cedula', '==', fila.cedula));
             const resultadoCedula = await getDocs(qCedula);
-
             if (!resultadoCedula.empty) {
               totalOmitidos++;
               continue;
             }
-
             const diasArray = fila.diasEntreno ? fila.diasEntreno.split(',').map(d => d.trim()) : ["Lunes", "Miércoles"];
-
             const nuevoAtleta = {
               cedula: fila.cedula || '',
               nombre1: fila.nombre1 || '',
@@ -469,20 +437,16 @@ export default function MasterDashboard() {
               tutorEmail: emailTutor,
               fechaRegistro: new Date()
             };
-
             await addDoc(collection(db, 'atletas'), nuevoAtleta);
             atletasRegistrados++;
-
           } catch (error) {
             console.error(`Error procesando la fila ${i + 1}:`, error);
           }
         }
-
         setProcesando(false);
         setProgreso('');
         await cargarDatosGenerales();
-        alert(`✅ Migración masiva completada.\n\n- Tutores creados: ${tutoresCreados}\n- Atletas registrados: ${atletasRegistrados}\n- Omitidos (duplicados): ${totalOmitidos}`);
-        setArchivoSeleccionado(null);
+        alert(`Migración masiva completada.\n\n- Tutores creados: ${tutoresCreados}\n- Atletas registrados: ${atletasRegistrados}\n- Omitidos (duplicados): ${totalOmitidos}`);
       },
       error: () => {
         setProcesando(false);
@@ -495,512 +459,264 @@ export default function MasterDashboard() {
   if (!usuario) return <div className="contenedor-principal">Cargando panel de Master...</div>;
 
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: '#0a192f', color: '#fff', fontFamily: 'sans-serif' }}>
+    <div className="master-container" translate="no">
       
-      {/* BARRA LATERAL (SIDEBAR) */}
-      <aside style={{ width: '260px', background: '#07111e', borderRight: '1px solid rgba(255,255,255,0.08)', display: 'flex', flexDirection: 'column', padding: '20px', position: 'fixed', height: '100vh', boxSizing: 'border-box' }}>
+      {/* 1. ESTILOS CSS - MOBILE FIRST (Adaptados a variables globales) */}
+      <style>{`
+        * { box-sizing: border-box; }
+        .master-container {
+          display: flex;
+          flex-direction: column;
+          min-height: 100vh;
+          background: var(--bg-principal, #0a192f);
+          color: var(--texto-principal, #fff);
+          font-family: sans-serif;
+        }
+
+        /* CABECERA EXCLUSIVA DE MÓVILES */
+        .mobile-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          background: var(--bg-secundario, #07111e);
+          padding: 15px 20px;
+          border-bottom: 1px solid var(--borde-color, rgba(255,255,255,0.08));
+          position: sticky;
+          top: 0;
+          z-index: 50;
+        }
+
+        /* MENÚ LATERAL (DRAWER EN MÓVIL) */
+        .sidebar {
+          position: fixed;
+          top: 0;
+          left: 0;
+          width: 260px;
+          height: 100vh;
+          background: var(--bg-secundario, #07111e);
+          border-right: 1px solid var(--borde-color, rgba(255,255,255,0.08));
+          z-index: 100;
+          transition: transform 0.3s ease;
+          display: flex;
+          flex-direction: column;
+          padding: 20px;
+          overflow-y: auto;
+        }
         
-        <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-          <img src={logoDaeji} alt="Logo DAEJI" style={{ width: '120px', marginBottom: '10px' }} />
-          <span style={{ background: '#e63946', color: '#fff', padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold' }}>MASTER ADMIN</span>
+        .sidebar.closed-mobile {
+          transform: translateX(-100%);
+        }
+
+        /* CAPA OSCURA */
+        .mobile-overlay {
+          position: fixed;
+          top: 0; left: 0; right: 0; bottom: 0;
+          background: rgba(0,0,0,0.6);
+          z-index: 90;
+          opacity: 0;
+          visibility: hidden;
+          transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        .mobile-overlay.active {
+          opacity: 1;
+          visibility: visible;
+        }
+
+        /* CONTENIDO PRINCIPAL ADAPTABLE */
+        .main-content {
+          flex: 1;
+          padding: 20px;
+          width: 100%;
+          max-width: 100vw;
+          overflow-x: auto; 
+        }
+
+        .btn-volver {
+          background: transparent;
+          border: none;
+          color: #3498db;
+          font-size: 1rem;
+          font-weight: bold;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+          cursor: pointer;
+        }
+
+        /* ------------------------------------------- */
+        /* ADAPTACIÓN A PANTALLAS GRANDES (ESCRITORIO) */
+        /* ------------------------------------------- */
+        @media (min-width: 800px) {
+          .master-container {
+            flex-direction: row;
+          }
+          .mobile-header {
+            display: none; 
+          }
+          .sidebar.closed-mobile {
+            transform: translateX(0); 
+          }
+          .main-content {
+            margin-left: 260px; 
+            padding: 40px;
+          }
+          .mobile-overlay {
+            display: none; 
+          }
+          .btn-cerrar-menu {
+            display: none; 
+          }
+        }
+      `}</style>
+
+      {/* 2. BARRA SUPERIOR (Botones protegidos con propiedad 'key') */}
+      <div className="mobile-header">
+        {seccionActiva !== 'inicio' ? (
+          <button key="btn-volver" onClick={() => cambiarSeccion('inicio')} className="btn-volver">
+            <span style={{ fontSize: '1.2rem' }}>⬅</span> <span>Volver al Inicio</span>
+          </button>
+        ) : (
+          <button 
+            key="btn-menu"
+            onClick={() => setMenuAbiertoMovil(true)} 
+            style={{ background: '#121212', border: '1px solid #333', color: '#fff', padding: '6px 12px', borderRadius: '6px', fontSize: '1.2rem', cursor: 'pointer' }}
+          >
+            <span>☰</span>
+          </button>
+        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <img src={logoDaeji} alt="Logo DAEJI" style={{ width: '85px' }} />
+        </div>
+      </div>
+
+      {/* 3. CAPA OSCURA */}
+      <div 
+        className={`mobile-overlay ${menuAbiertoMovil ? 'active' : ''}`} 
+        onClick={() => setMenuAbiertoMovil(false)}
+      ></div>
+
+      {/* 4. BARRA LATERAL DE NAVEGACIÓN */}
+      <aside className={`sidebar ${!menuAbiertoMovil ? 'closed-mobile' : ''}`}>
+        
+        <div className="btn-cerrar-menu" style={{ textAlign: 'right', marginBottom: '10px' }}>
+          <button onClick={() => setMenuAbiertoMovil(false)} style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '1.3rem', cursor: 'pointer' }}>✕</button>
         </div>
 
-        <nav style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1 }}>
+        <div style={{ textAlign: 'center', marginBottom: '25px' }}>
+          <img src={logoDaeji} alt="Logo DAEJI" style={{ width: '110px', marginBottom: '10px' }} />
+          <span style={{ background: 'var(--color-primario, #e63946)', color: '#fff', padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold', display: 'block', width: 'fit-content', margin: '0 auto' }}>MASTER ADMIN</span>
+        </div>
+        
+        <nav style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, overflowY: 'auto' }}>
           <button 
-            onClick={() => cambiarSeccion('inicio')}
-            style={{
-              padding: '12px 15px', borderRadius: '8px', border: 'none', textAlign: 'left', fontWeight: 'bold', cursor: 'pointer',
-              background: seccionActiva === 'inicio' ? '#e63946' : 'transparent',
-              color: seccionActiva === 'inicio' ? '#fff' : '#aaa'
-            }}
+            onClick={() => cambiarSeccion('inicio')} 
+            style={{ padding: '12px 15px', borderRadius: '8px', border: 'none', textAlign: 'left', fontWeight: 'bold', cursor: 'pointer', background: seccionActiva === 'inicio' ? 'var(--color-primario, #e63946)' : 'transparent', color: seccionActiva === 'inicio' ? '#fff' : '#aaa' }}
           >
-            📊 Resumen Ejecutivo
+            <span>Resumen Ejecutivo</span>
           </button>
-
           <button 
-            onClick={() => cambiarSeccion('gestion')}
-            style={{
-              padding: '12px 15px', borderRadius: '8px', border: 'none', textAlign: 'left', fontWeight: 'bold', cursor: 'pointer',
-              background: seccionActiva === 'gestion' ? '#e63946' : 'transparent',
-              color: seccionActiva === 'gestion' ? '#fff' : '#aaa'
-            }}
+            onClick={() => cambiarSeccion('gestion')} 
+            style={{ padding: '12px 15px', borderRadius: '8px', border: 'none', textAlign: 'left', fontWeight: 'bold', cursor: 'pointer', background: seccionActiva === 'gestion' ? 'var(--color-primario, #e63946)' : 'transparent', color: seccionActiva === 'gestion' ? '#fff' : '#aaa' }}
           >
-            🥋 Gestión de Atletas
+            <span>Gestión de Atletas</span>
           </button>
-
           <button 
-            onClick={() => cambiarSeccion('eventos')}
-            style={{
-              padding: '12px 15px', borderRadius: '8px', border: 'none', textAlign: 'left', fontWeight: 'bold', cursor: 'pointer',
-              background: seccionActiva === 'eventos' ? '#e63946' : 'transparent',
-              color: seccionActiva === 'eventos' ? '#fff' : '#aaa'
-            }}
+            onClick={() => cambiarSeccion('eventos')} 
+            style={{ padding: '12px 15px', borderRadius: '8px', border: 'none', textAlign: 'left', fontWeight: 'bold', cursor: 'pointer', background: seccionActiva === 'eventos' ? 'var(--color-primario, #e63946)' : 'transparent', color: seccionActiva === 'eventos' ? '#fff' : '#aaa' }}
           >
-            🏆 Convocatorias y Eventos
+            <span>Convocatorias y Eventos</span>
           </button>
-
           <button 
-            onClick={() => cambiarSeccion('roles')}
-            style={{
-              padding: '12px 15px', borderRadius: '8px', border: 'none', textAlign: 'left', fontWeight: 'bold', cursor: 'pointer',
-              background: seccionActiva === 'roles' ? '#e63946' : 'transparent',
-              color: seccionActiva === 'roles' ? '#fff' : '#aaa'
-            }}
+            onClick={() => cambiarSeccion('roles')} 
+            style={{ padding: '12px 15px', borderRadius: '8px', border: 'none', textAlign: 'left', fontWeight: 'bold', cursor: 'pointer', background: seccionActiva === 'roles' ? 'var(--color-primario, #e63946)' : 'transparent', color: seccionActiva === 'roles' ? '#fff' : '#aaa' }}
           >
-            🔐 Gestión de Roles
+            <span>Gestión de Roles</span>
           </button>
-
           <button 
-            onClick={() => cambiarSeccion('migracion')}
-            style={{
-              padding: '12px 15px', borderRadius: '8px', border: 'none', textAlign: 'left', fontWeight: 'bold', cursor: 'pointer',
-              background: seccionActiva === 'migracion' ? '#e63946' : 'transparent',
-              color: seccionActiva === 'migracion' ? '#fff' : '#aaa'
-            }}
+            onClick={() => cambiarSeccion('migracion')} 
+            style={{ padding: '12px 15px', borderRadius: '8px', border: 'none', textAlign: 'left', fontWeight: 'bold', cursor: 'pointer', background: seccionActiva === 'migracion' ? 'var(--color-primario, #e63946)' : 'transparent', color: seccionActiva === 'migracion' ? '#fff' : '#aaa' }}
           >
-            📥 Carga Masiva (CSV)
+            <span>Carga Masiva (CSV)</span>
           </button>
-
           <button 
-            onClick={() => cambiarSeccion('asistencia')}
-            style={{
-              padding: '12px 15px', borderRadius: '8px', border: 'none', textAlign: 'left', fontWeight: 'bold', cursor: 'pointer',
-              background: 'transparent',
-              color: '#aaa'
-            }}
+            onClick={() => cambiarSeccion('asistencia')} 
+            style={{ padding: '12px 15px', borderRadius: '8px', border: 'none', textAlign: 'left', fontWeight: 'bold', cursor: 'pointer', background: 'transparent', color: '#aaa' }}
           >
-            📋 Control de Asistencia &rarr;
+            <span>Control de Asistencia &rarr;</span>
           </button>
         </nav>
-
-        <div style={{ borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '15px' }}>
+        
+        <div style={{ borderTop: '1px solid var(--borde-color, rgba(255,255,255,0.08))', paddingTop: '15px' }}>
           <p style={{ fontSize: '0.75rem', color: '#888', marginBottom: '10px', overflow: 'hidden', textOverflow: 'ellipsis' }}>{usuario.email}</p>
           <button onClick={manejarCerrarSesion} className="btn-secundario" style={{ width: '100%', fontSize: '0.85rem' }}>
-            CERRAR SESIÓN
+            <span>CERRAR SESIÓN</span>
           </button>
         </div>
-
       </aside>
 
-      {/* CONTENEDOR DERECHO */}
-      <main style={{ marginLeft: '260px', flex: 1, padding: '40px', boxSizing: 'border-box', overflowY: 'auto' }}>
-        
-        {/* VISTA 1: INICIO (RESUMEN EJECUTIVO CON KPI'S DE ACTIVOS E INACTIVOS) */}
+      {/* 5. CONTENIDO PRINCIPAL DONDE CARGAN LOS MÓDULOS */}
+      <main className="main-content">
         {seccionActiva === 'inicio' && (
-          <div>
-            <h2>Resumen Ejecutivo</h2>
-            <p style={{ color: '#aaa', marginBottom: '30px' }}>Indicadores clave y estado general de la Escuela DAEJI.</p>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '30px' }}>
-              
-              {/* Tarjeta Total */}
-              <div style={{ background: 'rgba(255,255,255,0.03)', padding: '20px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)' }}>
-                <p style={{ margin: '0 0 5px 0', color: '#888', fontSize: '0.85rem' }}>Total de Atletas</p>
-                <h3 style={{ margin: 0, fontSize: '2rem', color: '#3498db' }}>{totalAtletas}</h3>
-              </div>
-
-              {/* Tarjeta Activos */}
-              <div style={{ background: 'rgba(255,255,255,0.03)', padding: '20px', borderRadius: '12px', border: '1px solid rgba(46, 204, 113, 0.3)' }}>
-                <p style={{ margin: '0 0 5px 0', color: '#2ecc71', fontSize: '0.85rem', fontWeight: 'bold' }}>🟢 Alumnos Activos</p>
-                <h3 style={{ margin: 0, fontSize: '2rem', color: '#2ecc71' }}>{atletasActivos}</h3>
-              </div>
-
-              {/* Tarjeta Inactivos */}
-              <div style={{ background: 'rgba(255,255,255,0.03)', padding: '20px', borderRadius: '12px', border: '1px solid rgba(231, 76, 60, 0.3)' }}>
-                <p style={{ margin: '0 0 5px 0', color: '#e74c3c', fontSize: '0.85rem', fontWeight: 'bold' }}>🔴 Alumnos Inactivos</p>
-                <h3 style={{ margin: 0, fontSize: '2rem', color: '#e74c3c' }}>{atletasInactivos}</h3>
-              </div>
-
-            </div>
-
-            <div className="tarjeta-auth" style={{ textAlign: 'left' }}>
-              <h3 style={{ color: '#fff', marginBottom: '10px' }}>Accesos Rápidos</h3>
-              <p style={{ color: '#ccc', fontSize: '0.9rem', marginBottom: '20px' }}>Selecciona una herramienta del menú lateral izquierdo para gestionar la academia.</p>
-              <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
-                <button onClick={() => cambiarSeccion('gestion')} className="btn-secundario" style={{ background: '#e63946', color: '#fff', border: 'none' }}>
-                  Gestionar Atletas &rarr;
-                </button>
-                <button onClick={() => cambiarSeccion('eventos')} className="btn-secundario" style={{ background: '#e63946', color: '#fff', border: 'none' }}>
-                  Crear Eventos &rarr;
-                </button>
-                <button onClick={() => cambiarSeccion('roles')} className="btn-secundario" style={{ background: '#3498db', color: '#fff', border: 'none' }}>
-                  Gestión de Roles &rarr;
-                </button>
-                <button onClick={() => navigate('/asistencia')} className="btn-secundario" style={{ background: '#2ecc71', color: '#fff', border: 'none' }}>
-                  Control de Asistencia &rarr;
-                </button>
-              </div>
-            </div>
-          </div>
+          <MasterInicio 
+            key="inicio"
+            totalAtletas={totalAtletas} 
+            atletasActivos={atletasActivos} 
+            atletasInactivos={atletasInactivos} 
+            cambiarSeccion={cambiarSeccion} 
+            navigate={navigate} 
+          />
         )}
 
-        {/* VISTA 2: GESTIÓN DE ATLETAS */}
         {seccionActiva === 'gestion' && (
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '15px' }}>
-              <div>
-                <h2>Gestión Global de Atletas</h2>
-                <p style={{ color: '#aaa', margin: 0 }}>Modifica los datos libremente y guarda todo al final de la página.</p>
-              </div>
-              <button
-                onClick={guardarCambiosMasivosAtletas}
-                className="btn-principal"
-                style={{ padding: '12px 25px', background: '#2ecc71', color: '#fff', border: 'none', fontWeight: 'bold', cursor: 'pointer', fontSize: '1rem', borderRadius: '8px' }}
-                disabled={guardandoMasivoAtletas}
-              >
-                {guardandoMasivoAtletas ? '💾 GUARDANDO CAMBIOS...' : '💾 GUARDAR CAMBIOS MASIVOS'}
-              </button>
-            </div>
-
-            <input 
-              type="text" 
-              placeholder="🔍 Buscar por nombre o cédula..." 
-              value={busquedaAtleta}
-              onChange={(e) => setBusquedaAtleta(e.target.value)}
-              style={{ width: '100%', padding: '12px 15px', marginBottom: '20px', borderRadius: '8px', background: '#121212', color: '#fff', border: '1px solid #333' }}
-            />
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-              {listaAtletasGlobal
-                .filter(a => `${a.nombre1} ${a.apellido1} ${a.cedula}`.toLowerCase().includes(busquedaAtleta.toLowerCase()))
-                .map((atleta) => {
-                  const diasAsignados = atleta.disciplina?.diasEntreno || [];
-
-                  return (
-                    <div key={atleta.id} style={{ background: 'rgba(10, 25, 47, 0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '12px', padding: '20px', display: 'grid', gridTemplateColumns: '1.5fr 1fr 1fr 2.5fr 1fr', gap: '15px', alignItems: 'center', flexWrap: 'wrap' }}>
-                      
-                      <div>
-                        <h4 style={{ margin: 0, color: '#fff' }}>{atleta.nombre1} {atleta.apellido1} {atleta.apellido2}</h4>
-                        <p style={{ margin: '3px 0 0 0', fontSize: '0.8rem', color: '#888' }}>
-                          Cédula: {atleta.cedula} | <strong style={{ color: '#f39c12' }}>Edad: {atleta.edad} años ({atleta.categoria})</strong>
-                        </p>
-                      </div>
-
-                      <div>
-                        <label style={{ fontSize: '0.75rem', color: '#aaa', display: 'block' }}>Estado</label>
-                        <select 
-                          value={atleta.estado || 'Activo'} 
-                          onChange={(e) => manejarCambioLocalAtleta(atleta.id, 'estado', e.target.value)}
-                          style={{ padding: '6px', borderRadius: '6px', background: '#121212', color: '#fff', border: '1px solid #333', width: '100%' }}
-                        >
-                          <option value="Activo">Activo</option>
-                          <option value="Inactivo">Inactivo</option>
-                        </select>
-                      </div>
-
-                      <div>
-                        <label style={{ fontSize: '0.75rem', color: '#aaa', display: 'block' }}>Tipo / Cuota</label>
-                        <select 
-                          value={atleta.financiera?.tipoAlumno || 'Regular'} 
-                          onChange={(e) => manejarCambioLocalAtleta(atleta.id, 'financiera.tipoAlumno', e.target.value)}
-                          style={{ padding: '6px', borderRadius: '6px', background: '#121212', color: '#fff', border: '1px solid #333', width: '100%', marginBottom: '4px' }}
-                        >
-                          <option value="Regular">Regular</option>
-                          <option value="Becado">Becado</option>
-                        </select>
-                        <input 
-                          type="text" 
-                          value={atleta.financiera?.cuotaMensual || ''} 
-                          placeholder="Cuota ₡"
-                          onChange={(e) => manejarCambioLocalAtleta(atleta.id, 'financiera.cuotaMensual', e.target.value)}
-                          style={{ padding: '5px', borderRadius: '6px', background: '#121212', color: '#fff', border: '1px solid #333', width: '100%', fontSize: '0.85rem' }}
-                        />
-                      </div>
-
-                      <div>
-                        <label style={{ fontSize: '0.75rem', color: '#aaa', display: 'block', marginBottom: '4px' }}>Días de Entreno (Todos incluidos)</label>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                          {diasSemanaDisponibles.map((dia) => {
-                            const seleccionado = diasAsignados.includes(dia);
-                            return (
-                              <button
-                                key={dia}
-                                type="button"
-                                onClick={() => manejarCambioDiasLocal(atleta.id, dia)}
-                                style={{
-                                  padding: '4px 6px',
-                                  fontSize: '0.65rem',
-                                  borderRadius: '4px',
-                                  border: 'none',
-                                  fontWeight: 'bold',
-                                  cursor: 'pointer',
-                                  background: seleccionado ? '#e63946' : 'rgba(255,255,255,0.08)',
-                                  color: seleccionado ? '#fff' : '#aaa'
-                                }}
-                              >
-                                {dia.substring(0, 3)}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      <div>
-                        <label style={{ fontSize: '0.75rem', color: '#aaa', display: 'block' }}>Grado</label>
-                        <select 
-                          value={atleta.disciplina?.grado || 'Cinturón Blanco'} 
-                          onChange={(e) => manejarCambioLocalAtleta(atleta.id, 'disciplina.grado', e.target.value)}
-                          style={{ padding: '6px', borderRadius: '6px', background: '#121212', color: '#fff', border: '1px solid #333', width: '100%', fontSize: '0.85rem' }}
-                        >
-                          <option value="Cinturón Blanco">Blanco (10° Gup)</option>
-                          <option value="Cinturón Blanco-Amarillo">Blanco-Amarillo (9° Gup)</option>
-                          <option value="Cinturón Amarillo">Amarillo (8° Gup)</option>
-                          <option value="Cinturón Amarillo-Naranja">Amarillo-Naranja (8° Gup)</option>
-                          <option value="Cinturón Naranja">Naranja (7° Gup)</option>
-                          <option value="Cinturón Amarillo-Verde">Amarillo-Verde (7° Gup)</option>
-                          <option value="Cinturón Verde">Verde (6° Gup)</option>
-                          <option value="Cinturón Verde-Azul">Verde-Azul (5° Gup)</option>
-                          <option value="Cinturón Azul">Azul (4° Gup)</option>
-                          <option value="Cinturón Azul-Rojo">Azul-Rojo (3° Gup)</option>
-                          <option value="Cinturón Rojo">Rojo (2° Gup)</option>
-                          <option value="Cinturón Rojo-Negro">Rojo-Negro (1° Gup)</option>
-                          <option value="Cinturón Negro 1er Dan">Negro (1er Dan)</option>
-                          <option value="Cinturón Negro 2do Dan">Negro (2do Dan)</option>
-                          <option value="Cinturón Negro 3er Dan">Negro (3er Dan)</option>
-                          <option value="Cinturón Negro 4to Dan">Negro (4to Dan)</option>
-                        </select>
-                      </div>
-
-                    </div>
-                  );
-                })}
-
-              <div style={{ marginTop: '20px', textAlign: 'right', background: 'rgba(7, 17, 30, 0.9)', padding: '20px', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)' }}>
-                <button
-                  onClick={guardarCambiosMasivosAtletas}
-                  className="btn-principal"
-                  style={{ padding: '15px 30px', background: '#2ecc71', color: '#fff', border: 'none', fontWeight: 'bold', cursor: 'pointer', fontSize: '1.1rem', borderRadius: '8px' }}
-                  disabled={guardandoMasivoAtletas}
-                >
-                  {guardandoMasivoAtletas ? '💾 GUARDANDO CAMBIOS...' : '💾 GUARDAR TODOS LOS CAMBIOS DE ATLETAS (MASIVO)'}
-                </button>
-              </div>
-
-            </div>
-          </div>
+          <MasterGestionAtletas 
+            key="gestion"
+            listaAtletasGlobal={listaAtletasGlobal} 
+            manejarCambioLocalAtleta={manejarCambioLocalAtleta} 
+            manejarCambioDiasLocal={manejarCambioDiasLocal} 
+            guardarCambiosMasivosAtletas={guardarCambiosMasivosAtletas} 
+            guardandoMasivoAtletas={guardandoMasivoAtletas} 
+          />
         )}
 
-        {/* VISTA NUEVA: GESTIÓN DE EVENTOS */}
         {seccionActiva === 'eventos' && (
-          <div style={{ maxWidth: '900px' }}>
-            <h2>🏆 Convocatorias, Exámenes y Eventos</h2>
-            <p style={{ color: '#aaa', marginBottom: '25px' }}>
-              Crea eventos oficiales. El sistema validará automáticamente la asistencia (&gt;80%), antigüedad (≥6 meses) y pagos de los alumnos al inscribirse.
-            </p>
-
-            <form onSubmit={crearNuevoEvento} style={{ background: 'rgba(7, 17, 30, 0.9)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '25px', marginBottom: '30px' }}>
-              <h3 style={{ margin: '0 0 20px 0', color: '#fff', fontSize: '1.1rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '10px' }}>
-                📝 Crear Nuevo Evento / Examen
-              </h3>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '15px', marginBottom: '15px' }}>
-                <div>
-                  <label style={{ fontSize: '0.8rem', color: '#aaa', display: 'block', marginBottom: '5px' }}>Título del Evento</label>
-                  <input 
-                    type="text" 
-                    placeholder="Ej. Examen de Promoción de Grados - Diciembre" 
-                    value={tituloEvento} 
-                    onChange={(e) => setTituloEvento(e.target.value)}
-                    required
-                    style={{ width: '100%', padding: '10px', background: '#121212', color: '#fff', border: '1px solid #333', borderRadius: '6px' }}
-                  />
-                </div>
-                <div>
-                  <label style={{ fontSize: '0.8rem', color: '#aaa', display: 'block', marginBottom: '5px' }}>Tipo de Evento</label>
-                  <select 
-                    value={tipoEvento} 
-                    onChange={(e) => setTipoEvento(e.target.value)}
-                    style={{ width: '100%', padding: '10px', background: '#121212', color: '#fff', border: '1px solid #333', borderRadius: '6px' }}
-                  >
-                    <option value="Examen">Examen de Grado</option>
-                    <option value="Capacitacion">Capacitación</option>
-                    <option value="Exhibicion">Exhibición</option>
-                    <option value="Torneo">Torneo / Competencia</option>
-                  </select>
-                </div>
-              </div>
-
-              <div style={{ marginBottom: '15px' }}>
-                <label style={{ fontSize: '0.8rem', color: '#aaa', display: 'block', marginBottom: '5px' }}>Descripción del Evento y Requisitos</label>
-                <textarea 
-                  rows="3"
-                  placeholder="Detalles del evento, lugar, hora y observaciones..." 
-                  value={descripcionEvento} 
-                  onChange={(e) => setDescripcionEvento(e.target.value)}
-                  style={{ width: '100%', padding: '10px', background: '#121212', color: '#fff', border: '1px solid #333', borderRadius: '6px', resize: 'vertical' }}
-                />
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '15px', marginBottom: '20px' }}>
-                <div>
-                  <label style={{ fontSize: '0.8rem', color: '#aaa', display: 'block', marginBottom: '5px' }}>Costo (₡ Colones)</label>
-                  <input 
-                    type="text" 
-                    placeholder="Ej. 15000" 
-                    value={costoEvento} 
-                    onChange={(e) => setCostoEvento(e.target.value)}
-                    style={{ width: '100%', padding: '10px', background: '#121212', color: '#fff', border: '1px solid #333', borderRadius: '6px' }}
-                  />
-                </div>
-                <div>
-                  <label style={{ fontSize: '0.8rem', color: '#aaa', display: 'block', marginBottom: '5px' }}>Fecha Real del Evento</label>
-                  <input 
-                    type="date" 
-                    value={fechaRealEvento} 
-                    onChange={(e) => setFechaRealEvento(e.target.value)}
-                    required
-                    style={{ width: '100%', padding: '10px', background: '#121212', color: '#fff', border: '1px solid #333', borderRadius: '6px' }}
-                  />
-                </div>
-                <div>
-                  <label style={{ fontSize: '0.8rem', color: '#aaa', display: 'block', marginBottom: '5px' }}>Fecha Límite de Pago</label>
-                  <input 
-                    type="date" 
-                    value={fechaLimitePago} 
-                    onChange={(e) => setFechaLimitePago(e.target.value)}
-                    style={{ width: '100%', padding: '10px', background: '#121212', color: '#fff', border: '1px solid #333', borderRadius: '6px' }}
-                  />
-                </div>
-              </div>
-
-              <div style={{ textAlign: 'right' }}>
-                <button 
-                  type="submit" 
-                  disabled={guardandoEvento}
-                  style={{ background: '#e63946', color: '#fff', border: 'none', padding: '12px 25px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}
-                >
-                  {guardandoEvento ? '⏳ Publicando...' : '🚀 Publicar Evento Oficial'}
-                </button>
-              </div>
-            </form>
-
-            <h3 style={{ marginBottom: '15px', color: '#fff' }}>Eventos Activos Creados ({listaEventos.length})</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-              {listaEventos.map((ev) => (
-                <div key={ev.id} style={{ background: 'rgba(7, 17, 30, 0.9)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '10px', padding: '20px' }}>
-                  <span style={{ background: '#3498db', color: '#fff', padding: '2px 8px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 'bold' }}>{ev.tipo}</span>
-                  <h4 style={{ margin: '8px 0 5px 0', color: '#fff', fontSize: '1.1rem' }}>{ev.titulo}</h4>
-                  <p style={{ margin: '0 0 10px 0', color: '#aaa', fontSize: '0.9rem' }}>{ev.descripcion}</p>
-                  <div style={{ display: 'flex', gap: '20px', fontSize: '0.8rem', color: '#f39c12' }}>
-                    <span>📅 Fecha: {ev.fechaReal}</span>
-                    <span>💰 Costo: ₡{ev.costo}</span>
-                    <span>⏳ Límite de Pago: {ev.fechaLimitePago}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          <MasterEventos 
+            key="eventos"
+            tituloEvento={tituloEvento} setTituloEvento={setTituloEvento}
+            tipoEvento={tipoEvento} setTipoEvento={setTipoEvento}
+            descripcionEvento={descripcionEvento} setDescripcionEvento={setDescripcionEvento}
+            costoEvento={costoEvento} setCostoEvento={setCostoEvento}
+            fechaInicioVisibilidad={fechaInicioVisibilidad} setFechaInicioVisibilidad={setFechaInicioVisibilidad}
+            fechaFinVisibilidad={fechaFinVisibilidad} setFechaFinVisibilidad={setFechaFinVisibilidad}
+            fechaRealEvento={fechaRealEvento} setFechaRealEvento={setFechaRealEvento}
+            fechaLimitePago={fechaLimitePago} setFechaLimitePago={setFechaLimitePago}
+            guardandoEvento={guardandoEvento} crearNuevoEvento={crearNuevoEvento} listaEventos={listaEventos}
+          />
         )}
 
-        {/* VISTA 3: GESTIÓN DE ROLES */}
         {seccionActiva === 'roles' && (
-          <div style={{ maxWidth: '850px' }}>
-            <h2>🔐 Gestión de Roles y Permisos por Tutor</h2>
-            <p style={{ color: '#aaa', marginBottom: '25px' }}>
-              Selecciona un tutor registrado en el sistema y asigna los módulos o páginas a los que tendrá acceso.
-            </p>
-
-            <div style={{ background: 'rgba(7, 17, 30, 0.9)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '25px', marginBottom: '25px' }}>
-              <label style={{ display: 'block', fontSize: '0.9rem', color: '#3498db', marginBottom: '8px', fontWeight: 'bold' }}>
-                Seleccionar Tutor / Correo Electrónico:
-              </label>
-              <select 
-                value={tutorSeleccionado} 
-                onChange={(e) => seleccionarTutor(e.target.value)}
-                style={{ width: '100%', padding: '12px', background: '#121212', color: '#fff', border: '1px solid #333', borderRadius: '8px', fontSize: '0.95rem' }}
-              >
-                <option value="">-- Seleccione un tutor --</option>
-                {listaTutores.map((correo, idx) => (
-                  <option key={idx} value={correo}>{correo}</option>
-                ))}
-              </select>
-            </div>
-
-            {tutorSeleccionado && (
-              <div style={{ background: 'rgba(7, 17, 30, 0.9)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '25px' }}>
-                <h3 style={{ margin: '0 0 15px 0', color: '#fff', fontSize: '1.1rem', borderBottom: '1px solid rgba(255,255,255,0.1)', paddingBottom: '10px' }}>
-                  Páginas autorizadas para: <span style={{ color: '#2ecc71' }}>{tutorSeleccionado}</span>
-                </h3>
-
-                {cargandoRoles ? (
-                  <p style={{ color: '#aaa', textAlign: 'center', padding: '20px' }}>Cargando permisos...</p>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    {modulosDisponibles.map((modulo) => (
-                      <label key={modulo.id} style={{ display: 'flex', alignItems: 'center', gap: '15px', cursor: 'pointer', background: 'rgba(255,255,255,0.03)', padding: '12px 18px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                        <input 
-                          type="checkbox" 
-                          checked={permisosTutor[modulo.id] || false}
-                          onChange={() => cambiarCheckModulo(modulo.id)}
-                          style={{ width: '20px', height: '20px', accentColor: '#e63946', cursor: 'pointer' }}
-                        />
-                        <span style={{ fontSize: '0.95rem', color: '#fff', fontWeight: '500' }}>{modulo.label}</span>
-                      </label>
-                    ))}
-                  </div>
-                )}
-
-                <div style={{ marginTop: '25px', textAlign: 'right' }}>
-                  <button 
-                    onClick={guardarPermisosTutor}
-                    style={{ background: '#2ecc71', color: '#fff', border: 'none', padding: '12px 28px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.95rem' }}
-                  >
-                    💾 Guardar Permisos del Tutor
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
+          <MasterRoles 
+            key="roles"
+            listaTutores={listaTutores}
+            tutorSeleccionado={tutorSeleccionado}
+            seleccionarTutor={seleccionarTutor}
+            cargandoRoles={cargandoRoles}
+            modulosDisponibles={modulosDisponibles}
+            permisosTutor={permisosTutor}
+            cambiarCheckModulo={cambiarCheckModulo}
+            guardarPermisosTutor={guardarPermisosTutor}
+          />
         )}
 
-        {/* VISTA 4: CARGA MASIVA */}
         {seccionActiva === 'migracion' && (
-          <div className="tarjeta-auth" style={{ width: '100%', textAlign: 'left', maxWidth: '800px' }}>
-            <h3 style={{ color: '#fff', marginBottom: '15px', borderBottom: '1px solid #333', paddingBottom: '10px' }}>
-              Módulo de Migración y Carga Masiva
-            </h3>
-            <p style={{ color: '#ccc', fontSize: '0.9rem', lineHeight: '1.5' }}>
-              En la columna <strong>diasEntreno</strong> de tu CSV, puedes escribir los días separados por comas (ej: <code style={{color: '#3498db'}}>Lunes,Miércoles,Viernes</code>).
-            </p>
-
-            <div style={{ margin: '25px 0', background: 'rgba(255,255,255,0.03)', padding: '20px', borderRadius: '8px', border: '1px dashed rgba(255,255,255,0.15)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
-              <div>
-                <h4 style={{ margin: '0 0 5px 0', color: '#fff' }}>1. Obtén la estructura base</h4>
-                <p style={{ margin: 0, color: '#aaa', fontSize: '0.85rem' }}>Plantilla CSV actualizada con soporte para días múltiples.</p>
-              </div>
-              <button onClick={descargarPlantillaCSV} className="btn-secundario" style={{ background: '#3498db', color: '#fff', border: 'none' }}>
-                📥 Descargar Plantilla CSV
-              </button>
-            </div>
-
-            <div style={{ background: 'rgba(255,255,255,0.03)', padding: '20px', borderRadius: '8px', border: '1px dashed rgba(255,255,255,0.15)' }}>
-              <h4 style={{ margin: '0 0 5px 0', color: '#fff' }}>2. Sube el archivo completado</h4>
-              
-              <input 
-                type="file" 
-                accept=".csv"
-                onChange={(e) => setArchivoSeleccionado(e.target.files[0])}
-                style={{ width: '100%', padding: '10px', background: '#121212', borderRadius: '8px', border: '1px solid #333', color: '#fff' }} 
-              />
-              
-              {procesando && (
-                <p style={{ color: '#f39c12', marginTop: '15px', fontWeight: 'bold', textAlign: 'center' }}>
-                  ⏳ {progreso}
-                </p>
-              )}
-
-              <button 
-                className="btn-principal ancho-completo" 
-                style={{ marginTop: '15px', opacity: procesando ? 0.7 : 1, cursor: procesando ? 'not-allowed' : 'pointer' }}
-                onClick={iniciarMigracionMasiva}
-                disabled={procesando}
-              >
-                {procesando ? 'IMPORTANDO DATOS...' : '🚀 Procesar e Iniciar Migración Masiva'}
-              </button>
-            </div>
-          </div>
+          <MasterMigracion 
+            key="migracion"
+            descargarPlantillaCSV={descargarPlantillaCSV}
+            setArchivoSeleccionado={setArchivoSeleccionado}
+            procesando={procesando}
+            progreso={progreso}
+            iniciarMigracionMasiva={iniciarMigracionMasiva}
+          />
         )}
-
       </main>
     </div>
   );

@@ -1,3 +1,18 @@
+/* ==========================================================================
+   VARIABLES GLOBALES (PREPARADAS PARA MARCA BLANCA Y MULTI-ACADEMIA)
+   ========================================================================== */
+:root {
+  --color-primario: #00b4d8;       /* Antes era #e63946 (Rojo). Ahora es un Celeste brillante */
+  --color-primario-hover: #0096c7; /* Color al pasar el mouse por encima de los botones */
+  --bg-principal: #121212;         /* Fondo oscuro general de la app */
+  --bg-secundario: #0a192f;        /* Azul oscuro elegante para headers y paneles */
+  --bg-tarjeta: #1e1e24;           /* Fondo para tarjetas de autenticación */
+  --texto-principal: #ffffff;      /* Texto blanco principal */
+  --texto-secundario: #cccccc;     /* Texto gris claro secundario */
+  --texto-atenuado: #888888;       /* Texto gris oscuro de ayuda */
+  --borde-color: rgba(255, 255, 255, 0.1);
+}
+
 /* Limpieza de márgenes por defecto */
 * {
   margin: 0;
@@ -6,10 +21,10 @@
   font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 }
 
-/* Identidad visual DAEJI */
+/* Identidad visual DAEJI / Multi-Academia */
 .contenedor-principal {
-  background-color: #121212; /* Fondo oscuro moderno */
-  color: #ffffff; /* Texto blanco para contraste */
+  background-color: var(--bg-principal);
+  color: var(--texto-principal);
   min-height: 100vh;
   display: flex;
   flex-direction: column;
@@ -17,20 +32,20 @@
 
 /* Encabezado */
 .encabezado {
-  background-color: #0a192f; /* Azul oscuro elegante */
+  background-color: var(--bg-secundario);
   padding: 20px 40px;
   text-align: center;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
 }
 
 .encabezado h1 {
-  color: #e63946; /* Rojo de acento/acción */
+  color: var(--color-primario);
   font-size: 3rem;
   letter-spacing: 2px;
 }
 
 .encabezado p {
-  color: #ffffff;
+  color: var(--texto-principal);
   font-size: 1.2rem;
   letter-spacing: 4px;
   font-weight: 300;
@@ -64,7 +79,7 @@
 }
 
 .btn-principal {
-  background-color: #e63946;
+  background-color: var(--color-primario);
   color: white;
   border: none;
   padding: 15px 30px;
@@ -76,14 +91,14 @@
 }
 
 .btn-principal:hover {
-  background-color: #d62828;
+  background-color: var(--color-primario-hover);
   transform: translateY(-3px);
 }
 
 .btn-secundario {
   background-color: transparent;
   color: white;
-  border: 2px solid #e63946;
+  border: 2px solid var(--color-primario);
   padding: 15px 30px;
   font-size: 1rem;
   font-weight: bold;
@@ -101,48 +116,43 @@
   text-align: center;
   padding: 20px;
   background-color: #000000;
-  color: #888888;
+  color: var(--texto-atenuado);
   font-size: 0.9rem;
 }
 
-/* --- NUEVOS ESTILOS PARA LOGO Y VIDEO --- */
+/* --- ESTILOS PARA LOGO Y VIDEO --- */
 
-/* Estilos para el logo en imagen */
 .logo {
-  max-height: 90px; /* Si el logo se ve muy grande o pequeño, cambia este número */
+  max-height: 90px;
   width: auto;
   margin-bottom: 10px;
 }
 
-/* Estilos para el contenedor del video */
 .contenedor-video {
   width: 100%;
-  max-width: 700px; /* Ancho máximo del video */
+  max-width: 700px;
   margin-bottom: 40px;
-  border-radius: 12px; /* Bordes suaves que pediste en los requisitos */
+  border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); /* Sombra discreta para que resalte */
-  border: 2px solid #0a192f; /* Borde sutil azul oscuro */
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  border: 2px solid var(--bg-secundario);
 }
 
-/* El video se ajusta a su contenedor */
 .video-intro {
   width: 100%;
-  display: block; /* Elimina espacios extra debajo del video */
+  display: block;
 }
 
 /* --- ESTILOS PARA FORMULARIOS Y AUTENTICACIÓN --- */
 
-/* Centra la tarjeta en la pantalla */
 .auth-fondo {
   justify-content: center;
   align-items: center;
   padding: 20px;
 }
 
-/* Tarjeta moderna */
 .tarjeta-auth {
-  background-color: #1e1e24; /* Un gris muy oscuro, distinto al fondo */
+  background-color: var(--bg-tarjeta);
   padding: 40px;
   border-radius: 12px;
   width: 100%;
@@ -161,7 +171,6 @@
   font-weight: 500;
 }
 
-/* Estilos de los campos de texto */
 .formulario {
   display: flex;
   flex-direction: column;
@@ -176,7 +185,7 @@
   display: block;
   font-size: 0.9rem;
   margin-bottom: 8px;
-  color: #cccccc;
+  color: var(--texto-secundario);
 }
 
 .grupo-input input {
@@ -184,7 +193,7 @@
   padding: 12px 15px;
   border-radius: 8px;
   border: 1px solid #333333;
-  background-color: #121212;
+  background-color: var(--bg-principal);
   color: white;
   font-size: 1rem;
   outline: none;
@@ -192,10 +201,9 @@
 }
 
 .grupo-input input:focus {
-  border-color: #e63946; /* Borde rojo al escribir */
+  border-color: var(--color-primario);
 }
 
-/* Utilidades extras */
 .ancho-completo {
   width: 100%;
   margin-top: 10px;
@@ -204,11 +212,11 @@
 .texto-ayuda {
   margin-top: 20px;
   font-size: 0.9rem;
-  color: #888888;
+  color: var(--texto-atenuado);
 }
 
 .enlace {
-  color: #e63946;
+  color: var(--color-primario);
   text-decoration: none;
   font-weight: bold;
 }
@@ -217,19 +225,18 @@
   text-decoration: underline;
 }
 
-/* Mensajes de error */
 .alerta-error {
   background-color: rgba(230, 57, 70, 0.1);
-  color: #e63946;
+  color: var(--color-primario);
   padding: 12px;
   border-radius: 8px;
-  border: 1px solid #e63946;
+  border: 1px solid var(--color-primario);
   margin-bottom: 20px;
   font-size: 0.9rem;
 }
-/* --- NUEVOS ESTILOS PARA LA PORTADA (SCROLL Y ANIMACIÓN) --- */
 
-/* Animación sutil del fondo oscuro */
+/* --- ESTILOS PARA LA PORTADA (SCROLL Y ANIMACIÓN) --- */
+
 .fondo-animado {
   background: linear-gradient(135deg, #121212, #1a1a24, #0a0a0f, #121212);
   background-size: 400% 400%;
@@ -242,8 +249,6 @@
   100% { background-position: 0% 50%; }
 }
 
-/* Nuevo encabezado pegadizo (Sticky) */
-/* Encabezado dividido en 3 partes */
 .encabezado {
   background-color: rgba(10, 25, 47, 0.95);
   padding: 15px 40px;
@@ -257,18 +262,17 @@
   backdrop-filter: blur(5px);
 }
 
-/* Espacios laterales del encabezado para lograr el centrado perfecto */
 .espacio-lateral {
-  flex: 1; /* Toma un tercio del espacio */
+  flex: 1;
 }
 .espacio-lateral.derecha {
   display: flex;
-  justify-content: flex-end; /* Empuja el botón al borde derecho */
+  justify-content: flex-end;
 }
 .logo-container {
   flex: 1;
   display: flex;
-  justify-content: center; /* Mantiene el logo en el puro centro */
+  justify-content: center;
 }
 
 .logo-container .logo {
@@ -276,9 +280,8 @@
   max-height: 50px;
 }
 
-/* Botón superior derecho */
 .btn-header {
-  background-color: #e63946; /* El color rojo de DAEJI */
+  background-color: var(--color-primario);
   color: white;
   border: none;
   padding: 10px 20px;
@@ -290,11 +293,10 @@
 }
 
 .btn-header:hover {
-  background-color: #d62828; /* Rojo más oscuro al pasar el mouse */
-  transform: translateY(-2px); /* Pequeño salto animado */
+  background-color: var(--color-primario-hover);
+  transform: translateY(-2px);
 }
 
-/* Contenedor de las nuevas secciones */
 .contenido-scroll {
   padding: 40px 20px;
   max-width: 900px;
@@ -309,17 +311,16 @@
 
 .seccion-info h3 {
   font-size: 2rem;
-  color: #e63946;
+  color: var(--color-primario);
   margin-bottom: 20px;
 }
 
 .seccion-info p {
-  color: #cccccc;
+  color: var(--texto-secundario);
   line-height: 1.6;
   font-size: 1.1rem;
 }
 
-/* Diseño de tarjetas para la información */
 .grid-dos-columnas {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -331,47 +332,33 @@
   background-color: rgba(255, 255, 255, 0.05);
   padding: 30px;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--borde-color);
   text-align: left;
 }
 
 .tarjeta-info h4 {
-  color: #ffffff;
+  color: var(--texto-principal);
   margin-bottom: 15px;
   font-size: 1.3rem;
-  border-bottom: 2px solid #e63946;
+  border-bottom: 2px solid var(--color-primario);
   display: inline-block;
   padding-bottom: 5px;
 }
 
-/* Tarjeta especial para destacar logros */
 .logros-destacados {
-  border-color: rgba(255, 215, 0, 0.5); /* Borde dorado */
-  background-color: rgba(255, 215, 0, 0.05); /* Fondo dorado muy suave */
+  border-color: rgba(255, 215, 0, 0.5);
+  background-color: rgba(255, 215, 0, 0.05);
   text-align: center;
 }
 
-/* Ajustes para pantallas de teléfonos */
-@media (max-width: 768px) {
-  .encabezado {
-    flex-direction: column;
-    gap: 15px;
-    padding: 15px;
-  }
-  .grid-dos-columnas {
-    grid-template-columns: 1fr; /* Una sola columna en celulares */
-  }
-}
-/* ESTILOS PARA FOTOS/VIDEOS ADENTRO DE LAS TARJETAS */
 .media-tarjeta {
   width: 50%;
-  border-radius: 8px; /* Bordes redondeados */
-  margin-bottom: 15px; /* Espacio entre la foto y el título */
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  margin-bottom: 15px;
+  border: 1px solid var(--borde-color);
   box-shadow: 0 4px 10px rgba(0,0,0,0.3);
 }
 
-/* Ajustes para pantallas de teléfonos (Reemplaza el @media anterior por este) */
 @media (max-width: 768px) {
   .encabezado {
     flex-direction: column;
@@ -379,7 +366,7 @@
     padding: 15px;
   }
   .espacio-lateral.derecha {
-    justify-content: center; /* En el celular, centramos el botón */
+    justify-content: center;
   }
   .grid-dos-columnas {
     grid-template-columns: 1fr;
