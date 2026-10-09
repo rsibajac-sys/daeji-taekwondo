@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-// Importamos las herramientas de Firebase
-import { auth } from '../firebase/config';
-import { signInWithEmailAndPassword } from 'firebase/auth';
+import { auth, db } from '../firebase/config';
+import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
 import logoDaeji from '../assets/logo-letras.png';
 
 export default function Login() {
@@ -12,22 +12,41 @@ export default function Login() {
   
   const navigate = useNavigate();
 
-  // Esta función se ejecuta al presionar "INGRESAR"
   const manejarLogin = async (e) => {
     e.preventDefault();
-    setError(''); // Limpiamos errores
+    setError('');
 
     try {
-      // Le pedimos a Firebase que inicie sesión
+      // 1. Iniciar sesión en Firebase Auth
       await signInWithEmailAndPassword(auth, correo, password);
       
-      // Si la contraseña es correcta, lo enviamos (por ahora) a la portada
-      alert("¡Inicio de sesión exitoso!");
+      // 2. Verificar el estado de autorización en Firestore
+      const idDoc = correo.replace(/[@.]/g, '_');
+      const docRef = doc(db, 'roles_usuarios', idDoc);
+      const docSnap = await getDoc(docRef);
+
+      if (docSnap.exists()) {
+        const datosUsuario = docSnap.data();
+        
+        // Candado: Si está pendiente, lo sacamos del sistema
+        if (datosUsuario.estado === 'pendiente') {
+          await signOut(auth);
+          setError('Tu cuenta ha sido registrada, pero está pendiente de autorización por la administración.');
+          return;
+        }
+        
+        if (datosUsuario.estado === 'rechazado') {
+          await signOut(auth);
+          setError('Tu solicitud de cuenta no ha sido aprobada.');
+          return;
+        }
+      }
+
+      // Si pasa los filtros (es Master o usuario aprobado), entra
       navigate('/dashboard');
       
     } catch (errorFirebase) {
-      // Por seguridad, Firebase no dice si falló el correo o la clave, solo dice "credenciales inválidas"
-      setError('No fue posible iniciar sesión. Verifica tus datos.');
+      setError('No fue posible iniciar sesión. Verifica tus datos o contraseña.');
     }
   };
 
@@ -67,7 +86,6 @@ export default function Login() {
           </button>
         </form>
 
-        {/* Enlaces de ayuda para el usuario */}
         <p className="texto-ayuda">
           <Link to="/recuperar" className="enlace">¿Olvidaste tu contraseña?</Link>
         </p>

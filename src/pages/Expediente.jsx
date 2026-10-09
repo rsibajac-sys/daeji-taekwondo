@@ -4,6 +4,8 @@ import { auth, db } from '../firebase/config';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, updateDoc, collection, getDocs, addDoc } from 'firebase/firestore';
 import logoDaeji from '../assets/logo-letras.png';
+// 1. IMPORTACIÓN DEL COMPONENTE DE EVALUACIONES
+import ExpedienteEvaluaciones from './ExpedienteEvaluaciones';
 
 export default function Expediente() {
   const { id } = useParams();
@@ -18,6 +20,9 @@ export default function Expediente() {
   // Estados para Eventos y Convocatorias
   const [listaEventos, setListaEventos] = useState([]);
   const [inscripcionesAlumno, setInscripcionesAlumno] = useState([]);
+
+  // 2. ESTADO PARA MOSTRAR/OCULTAR EL HISTORIAL DE EXÁMENES
+  const [mostrarEvaluaciones, setMostrarEvaluaciones] = useState(false);
 
   // Estados para KPIs y Desglose de Asistencia
   const [estadisticasAsistencia, setEstadisticasAsistencia] = useState({
@@ -633,6 +638,30 @@ export default function Expediente() {
                 })}
               </div>
             )}
+
+            {/* 3. SECCIÓN HISTORIAL DE EXÁMENES INTEGRADA AQUÍ */}
+            <div style={{ marginTop: '30px', borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '20px' }}>
+              <button 
+                onClick={() => setMostrarEvaluaciones(!mostrarEvaluaciones)}
+                style={{ 
+                  background: mostrarEvaluaciones ? 'transparent' : '#3498db', 
+                  color: mostrarEvaluaciones ? '#3498db' : '#fff', 
+                  border: '1px solid #3498db', 
+                  padding: '10px 20px', 
+                  borderRadius: '8px', 
+                  fontWeight: 'bold', 
+                  cursor: 'pointer',
+                  width: '100%'
+                }}
+              >
+                {mostrarEvaluaciones ? 'Ocultar Historial Académico' : '📊 Ver Historial Académico y Exámenes'}
+              </button>
+
+              {mostrarEvaluaciones && (
+                <ExpedienteEvaluaciones atletaId={id} /> 
+              )}
+            </div>
+            
           </div>
         )}
 

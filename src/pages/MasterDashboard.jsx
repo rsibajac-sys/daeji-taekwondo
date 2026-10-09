@@ -12,11 +12,23 @@ import MasterGestionAtletas from '../master/MasterGestionAtletas';
 import MasterEventos from '../master/MasterEventos';
 import MasterRoles from '../master/MasterRoles';
 import MasterMigracion from '../master/MasterMigracion';
+import MasterSolicitudes from '../master/MasterSolicitudes';
+import MasterConceptos from "../master/MasterConceptos";
+import MasterElegibilidad from '../master/MasterElegibilidad';
+import MasterResultados from '../master/MasterResultados';
+import MasterMigracionExamenes from '../master/MasterMigracionExamenes'; // <--- Nueva Etapa 6 de migración de exámenes
 
 export default function MasterDashboard() {
   const [usuario, setUsuario] = useState(null);
   const [seccionActiva, setSeccionActiva] = useState('inicio');
   const [menuAbiertoMovil, setMenuAbiertoMovil] = useState(false);
+  
+  // Estados para Acordeones de la Barra Lateral
+  const [menuGrupos, setMenuGrupos] = useState({
+    evaluaciones: true,
+    atletas: true,
+    sistema: false
+  });
   
   const [totalAtletas, setTotalAtletas] = useState(0);
   const [atletasActivos, setAtletasActivos] = useState(0);
@@ -63,6 +75,7 @@ export default function MasterDashboard() {
     { id: 'evaluaciones', label: 'Evaluaciones y Exámenes' },
     { id: 'competencias', label: 'Historial de Competencias' },
     { id: 'eventos', label: 'Convocatorias y Eventos (Master)' },
+    { id: 'solicitudes', label: 'Aprobar Solicitudes de Acceso' },
   ];
 
   const navigate = useNavigate();
@@ -271,6 +284,10 @@ export default function MasterDashboard() {
     else if (seccion === 'eventos') await cargarEventos();
   };
 
+  const toggleGrupoMenu = (grupo) => {
+    setMenuGrupos({ ...menuGrupos, [grupo]: !menuGrupos[grupo] });
+  };
+
   const manejarCambioLocalAtleta = (idAtleta, campo, valor) => {
     setListaAtletasGlobal(prev => prev.map(a => {
       if (a.id === idAtleta) {
@@ -446,7 +463,7 @@ export default function MasterDashboard() {
         setProcesando(false);
         setProgreso('');
         await cargarDatosGenerales();
-        alert(`Migración masiva completada.\n\n- Tutores creados: ${tutoresCreados}\n- Atletas registrados: ${atletasRegistrados}\n- Omitidos (duplicados): ${totalOmitidos}`);
+        alert(`Migración masiva completada.\n\nTutores creados: ${tutoresCreados}\nAtletas registrados: ${atletasRegistrados}\nOmitidos (duplicados): ${totalOmitidos}`);
       },
       error: () => {
         setProcesando(false);
@@ -461,7 +478,7 @@ export default function MasterDashboard() {
   return (
     <div className="master-container" translate="no">
       
-      {/* 1. ESTILOS CSS - MOBILE FIRST (Adaptados a variables globales) */}
+      {/* 1. ESTILOS CSS - MOBILE FIRST */}
       <style>{`
         * { box-sizing: border-box; }
         .master-container {
@@ -473,7 +490,6 @@ export default function MasterDashboard() {
           font-family: sans-serif;
         }
 
-        /* CABECERA EXCLUSIVA DE MÓVILES */
         .mobile-header {
           display: flex;
           justify-content: space-between;
@@ -486,12 +502,11 @@ export default function MasterDashboard() {
           z-index: 50;
         }
 
-        /* MENÚ LATERAL (DRAWER EN MÓVIL) */
         .sidebar {
           position: fixed;
           top: 0;
           left: 0;
-          width: 260px;
+          width: 280px;
           height: 100vh;
           background: var(--bg-secundario, #07111e);
           border-right: 1px solid var(--borde-color, rgba(255,255,255,0.08));
@@ -507,7 +522,6 @@ export default function MasterDashboard() {
           transform: translateX(-100%);
         }
 
-        /* CAPA OSCURA */
         .mobile-overlay {
           position: fixed;
           top: 0; left: 0; right: 0; bottom: 0;
@@ -522,7 +536,6 @@ export default function MasterDashboard() {
           visibility: visible;
         }
 
-        /* CONTENIDO PRINCIPAL ADAPTABLE */
         .main-content {
           flex: 1;
           padding: 20px;
@@ -543,33 +556,17 @@ export default function MasterDashboard() {
           cursor: pointer;
         }
 
-        /* ------------------------------------------- */
-        /* ADAPTACIÓN A PANTALLAS GRANDES (ESCRITORIO) */
-        /* ------------------------------------------- */
         @media (min-width: 800px) {
-          .master-container {
-            flex-direction: row;
-          }
-          .mobile-header {
-            display: none; 
-          }
-          .sidebar.closed-mobile {
-            transform: translateX(0); 
-          }
-          .main-content {
-            margin-left: 260px; 
-            padding: 40px;
-          }
-          .mobile-overlay {
-            display: none; 
-          }
-          .btn-cerrar-menu {
-            display: none; 
-          }
+          .master-container { flex-direction: row; }
+          .mobile-header { display: none; }
+          .sidebar.closed-mobile { transform: translateX(0); }
+          .main-content { margin-left: 280px; padding: 40px; }
+          .mobile-overlay { display: none; }
+          .btn-cerrar-menu { display: none; }
         }
       `}</style>
 
-      {/* 2. BARRA SUPERIOR (Botones protegidos con propiedad 'key') */}
+      {/* 2. BARRA SUPERIOR */}
       <div className="mobile-header">
         {seccionActiva !== 'inicio' ? (
           <button key="btn-volver" onClick={() => cambiarSeccion('inicio')} className="btn-volver">
@@ -595,60 +592,110 @@ export default function MasterDashboard() {
         onClick={() => setMenuAbiertoMovil(false)}
       ></div>
 
-      {/* 4. BARRA LATERAL DE NAVEGACIÓN */}
+      {/* 4. BARRA LATERAL DE NAVEGACIÓN AGRUPADA */}
       <aside className={`sidebar ${!menuAbiertoMovil ? 'closed-mobile' : ''}`}>
         
         <div className="btn-cerrar-menu" style={{ textAlign: 'right', marginBottom: '10px' }}>
           <button onClick={() => setMenuAbiertoMovil(false)} style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '1.3rem', cursor: 'pointer' }}>✕</button>
         </div>
 
-        <div style={{ textAlign: 'center', marginBottom: '25px' }}>
-          <img src={logoDaeji} alt="Logo DAEJI" style={{ width: '110px', marginBottom: '10px' }} />
+        <div style={{ textAlign: 'center', marginBottom: '20px', borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: '12px' }}>
+          <img src={logoDaeji} alt="Logo DAEJI" style={{ width: '110px', marginBottom: '8px' }} />
           <span style={{ background: 'var(--color-primario, #e63946)', color: '#fff', padding: '2px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold', display: 'block', width: 'fit-content', margin: '0 auto' }}>MASTER ADMIN</span>
         </div>
         
-        <nav style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, overflowY: 'auto' }}>
-          <button 
-            onClick={() => cambiarSeccion('inicio')} 
-            style={{ padding: '12px 15px', borderRadius: '8px', border: 'none', textAlign: 'left', fontWeight: 'bold', cursor: 'pointer', background: seccionActiva === 'inicio' ? 'var(--color-primario, #e63946)' : 'transparent', color: seccionActiva === 'inicio' ? '#fff' : '#aaa' }}
-          >
-            <span>Resumen Ejecutivo</span>
-          </button>
-          <button 
-            onClick={() => cambiarSeccion('gestion')} 
-            style={{ padding: '12px 15px', borderRadius: '8px', border: 'none', textAlign: 'left', fontWeight: 'bold', cursor: 'pointer', background: seccionActiva === 'gestion' ? 'var(--color-primario, #e63946)' : 'transparent', color: seccionActiva === 'gestion' ? '#fff' : '#aaa' }}
-          >
-            <span>Gestión de Atletas</span>
-          </button>
-          <button 
-            onClick={() => cambiarSeccion('eventos')} 
-            style={{ padding: '12px 15px', borderRadius: '8px', border: 'none', textAlign: 'left', fontWeight: 'bold', cursor: 'pointer', background: seccionActiva === 'eventos' ? 'var(--color-primario, #e63946)' : 'transparent', color: seccionActiva === 'eventos' ? '#fff' : '#aaa' }}
-          >
-            <span>Convocatorias y Eventos</span>
-          </button>
-          <button 
-            onClick={() => cambiarSeccion('roles')} 
-            style={{ padding: '12px 15px', borderRadius: '8px', border: 'none', textAlign: 'left', fontWeight: 'bold', cursor: 'pointer', background: seccionActiva === 'roles' ? 'var(--color-primario, #e63946)' : 'transparent', color: seccionActiva === 'roles' ? '#fff' : '#aaa' }}
-          >
-            <span>Gestión de Roles</span>
-          </button>
-          <button 
-            onClick={() => cambiarSeccion('migracion')} 
-            style={{ padding: '12px 15px', borderRadius: '8px', border: 'none', textAlign: 'left', fontWeight: 'bold', cursor: 'pointer', background: seccionActiva === 'migracion' ? 'var(--color-primario, #e63946)' : 'transparent', color: seccionActiva === 'migracion' ? '#fff' : '#aaa' }}
-          >
-            <span>Carga Masiva (CSV)</span>
-          </button>
-          <button 
-            onClick={() => cambiarSeccion('asistencia')} 
-            style={{ padding: '12px 15px', borderRadius: '8px', border: 'none', textAlign: 'left', fontWeight: 'bold', cursor: 'pointer', background: 'transparent', color: '#aaa' }}
-          >
-            <span>Control de Asistencia &rarr;</span>
-          </button>
+        <nav style={{ display: 'flex', flexDirection: 'column', gap: '12px', flex: 1, overflowY: 'auto', paddingRight: '4px' }}>
+          
+          {/* PRINCIPAL */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            <button onClick={() => cambiarSeccion('inicio')} style={estiloBotonMenu(seccionActiva === 'inicio')}>
+              <span>📊 Resumen Ejecutivo</span>
+            </button>
+            <button onClick={() => cambiarSeccion('solicitudes')} style={estiloBotonMenu(seccionActiva === 'solicitudes')}>
+              <span>🔔 Solicitudes de Acceso</span>
+            </button>
+          </div>
+
+          {/* GRUPO: EVALUACIONES Y EXÁMENES (ACORDEÓN) */}
+          <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: '10px', padding: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
+            <div 
+              onClick={() => toggleGrupoMenu('evaluaciones')}
+              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '4px 6px', color: '#f39c12', fontWeight: 'bold', fontSize: '0.8rem', textTransform: 'uppercase' }}
+            >
+              <span>🏆 Evaluaciones y Ascensos</span>
+              <span>{menuGrupos.evaluaciones ? '▲' : '▼'}</span>
+            </div>
+
+            {menuGrupos.evaluaciones && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', marginTop: '8px' }}>
+                <button onClick={() => cambiarSeccion('conceptos')} style={estiloBotonMenu(seccionActiva === 'conceptos')}>
+                  <span>⚙️ Rúbricas de Evaluación</span>
+                </button>
+                <button onClick={() => cambiarSeccion('elegibilidad')} style={estiloBotonMenu(seccionActiva === 'elegibilidad')}>
+                  <span>☑️ Elegibilidad a Examen</span>
+                </button>
+                <button onClick={() => cambiarSeccion('resultados')} style={estiloBotonMenu(seccionActiva === 'resultados')}>
+                  <span>🏆 Resultados de Examen</span>
+                </button>
+                <button onClick={() => cambiarSeccion('migracionExamenes')} style={estiloBotonMenu(seccionActiva === 'migracionExamenes')}>
+                  <span>📂 Migrar Historial Exámenes</span>
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* GRUPO: GESTIÓN DE ATLETAS (ACORDEÓN) */}
+          <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: '10px', padding: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
+            <div 
+              onClick={() => toggleGrupoMenu('atletas')}
+              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '4px 6px', color: '#3498db', fontWeight: 'bold', fontSize: '0.8rem', textTransform: 'uppercase' }}
+            >
+              <span>👥 Alumnos y Matrícula</span>
+              <span>{menuGrupos.atletas ? '▲' : '▼'}</span>
+            </div>
+
+            {menuGrupos.atletas && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', marginTop: '8px' }}>
+                <button onClick={() => cambiarSeccion('gestion')} style={estiloBotonMenu(seccionActiva === 'gestion')}>
+                  <span>🥋 Gestión de Atletas</span>
+                </button>
+                <button onClick={() => cambiarSeccion('eventos')} style={estiloBotonMenu(seccionActiva === 'eventos')}>
+                  <span>📅 Convocatorias y Eventos</span>
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* GRUPO: SISTEMA Y CONFIGURACIÓN (ACORDEÓN) */}
+          <div style={{ background: 'rgba(255,255,255,0.02)', borderRadius: '10px', padding: '8px', border: '1px solid rgba(255,255,255,0.05)' }}>
+            <div 
+              onClick={() => toggleGrupoMenu('sistema')}
+              style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', padding: '4px 6px', color: '#2ecc71', fontWeight: 'bold', fontSize: '0.8rem', textTransform: 'uppercase' }}
+            >
+              <span>⚙️ Sistema y Accesos</span>
+              <span>{menuGrupos.sistema ? '▲' : '▼'}</span>
+            </div>
+
+            {menuGrupos.sistema && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', marginTop: '8px' }}>
+                <button onClick={() => cambiarSeccion('roles')} style={estiloBotonMenu(seccionActiva === 'roles')}>
+                  <span>🔑 Gestión de Roles</span>
+                </button>
+                <button onClick={() => cambiarSeccion('migracion')} style={estiloBotonMenu(seccionActiva === 'migracion')}>
+                  <span>📂 Carga Masiva Atletas</span>
+                </button>
+                <button onClick={() => cambiarSeccion('asistencia')} style={estiloBotonMenu(false)}>
+                  <span>📋 Control de Asistencia &rarr;</span>
+                </button>
+              </div>
+            )}
+          </div>
+
         </nav>
         
-        <div style={{ borderTop: '1px solid var(--borde-color, rgba(255,255,255,0.08))', paddingTop: '15px' }}>
+        <div style={{ borderTop: '1px solid var(--borde-color, rgba(255,255,255,0.08))', paddingTop: '15px', marginTop: '10px' }}>
           <p style={{ fontSize: '0.75rem', color: '#888', marginBottom: '10px', overflow: 'hidden', textOverflow: 'ellipsis' }}>{usuario.email}</p>
-          <button onClick={manejarCerrarSesion} className="btn-secundario" style={{ width: '100%', fontSize: '0.85rem' }}>
+          <button onClick={manejarCerrarSesion} style={{ width: '100%', background: 'rgba(231, 76, 60, 0.15)', color: '#e74c3c', border: '1px solid rgba(231, 76, 60, 0.3)', padding: '10px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', textAlign: 'center', fontSize: '0.85rem' }}>
             <span>CERRAR SESIÓN</span>
           </button>
         </div>
@@ -665,6 +712,10 @@ export default function MasterDashboard() {
             cambiarSeccion={cambiarSeccion} 
             navigate={navigate} 
           />
+        )}
+
+        {seccionActiva === 'solicitudes' && (
+          <MasterSolicitudes key="solicitudes" />
         )}
 
         {seccionActiva === 'gestion' && (
@@ -717,7 +768,39 @@ export default function MasterDashboard() {
             iniciarMigracionMasiva={iniciarMigracionMasiva}
           />
         )}
+
+        {seccionActiva === 'conceptos' && (
+          <MasterConceptos key="conceptos" />
+        )}
+
+        {seccionActiva === 'elegibilidad' && (
+         <MasterElegibilidad key="elegibilidad" />
+        )}
+
+        {seccionActiva === 'resultados' && (
+        <MasterResultados key="resultados" />
+        )}
+
+        {seccionActiva === 'migracionExamenes' && (
+        <MasterMigracionExamenes key="migracionExamenes" />
+        )}
+
       </main>
     </div>
   );
 }
+
+// Estilo auxiliar reutilizable para los botones del menú lateral agrupado
+const estiloBotonMenu = (activo) => ({
+  width: '100%',
+  padding: '10px 12px',
+  borderRadius: '8px',
+  border: 'none',
+  textAlign: 'left',
+  fontWeight: 'bold',
+  cursor: 'pointer',
+  fontSize: '0.85rem',
+  background: activo ? '#e63946' : 'rgba(255,255,255,0.03)',
+  color: activo ? '#fff' : '#aaa',
+  transition: 'all 0.2s ease'
+});

@@ -1,8 +1,49 @@
 import React from 'react';
+import logoDaeji from '../assets/logo-letras.png';
 
 export default function TutorInicio({ atletzasConAtrasos, permisosTutor, navigate }) {
   return (
     <div>
+      {/* TARJETA DE BIENVENIDA Y ACCESO A WHATSAPP */}
+      <div style={{ 
+        background: 'linear-gradient(135deg, rgba(7,17,30,0.9), rgba(10,25,47,0.9))', 
+        padding: '30px', 
+        borderRadius: '14px', 
+        border: '1px solid rgba(255,255,255,0.08)', 
+        marginBottom: '30px',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        textAlign: 'center',
+        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)'
+      }}>
+        <img src={logoDaeji} alt="Daeji" style={{ width: '120px', marginBottom: '20px' }} />
+        <h2 style={{ color: '#fff', fontSize: '2rem', margin: '0 0 10px 0' }}>¡Bienvenido a la Familia DAEJI!</h2>
+        <p style={{ color: '#aaa', fontSize: '1.1rem', maxWidth: '600px', lineHeight: '1.6', marginBottom: '20px' }}>
+          Tu cuenta ha sido autorizada. Únete a nuestra comunidad oficial para recibir avisos, circulares de entrenamiento y noticias en tiempo real.
+        </p>
+        <a 
+          href="https://chat.whatsapp.com/BDCt6opJCsNE6Xzhu9Mdcy" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          style={{ 
+            display: 'inline-block', 
+            background: '#25D366', 
+            color: '#fff', 
+            padding: '12px 25px', 
+            borderRadius: '8px', 
+            textDecoration: 'none', 
+            fontWeight: 'bold',
+            fontSize: '1rem',
+            boxShadow: '0 4px 15px rgba(37, 211, 102, 0.3)',
+            transition: 'transform 0.2s'
+          }}
+        >
+          💬 UNIRME AL GRUPO DE WHATSAPP
+        </a>
+      </div>
+
+      {/* AVISOS FINANCIEROS Y DE MENSUALIDAD */}
       {atletzasConAtrasos.length > 0 ? (
         <div style={{ background: 'rgba(231, 76, 60, 0.15)', border: '1px solid #e74c3c', borderRadius: '14px', padding: '25px', marginBottom: '30px', boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '15px', marginBottom: '15px' }}>
@@ -34,13 +75,15 @@ export default function TutorInicio({ atletzasConAtrasos, permisosTutor, navigat
         </div>
       )}
 
+      {/* PANEL DE CONTROL Y PERMISOS DEL TUTOR */}
       <div style={{ background: 'rgba(7, 17, 30, 0.9)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: '14px', padding: '30px', boxShadow: '0 8px 32px rgba(0,0,0,0.3)' }}>
         <h2 style={{ margin: '0 0 8px 0', fontSize: '1.8rem', color: '#fff' }}>Panel de Control del Tutor</h2>
         <p style={{ margin: 0, color: '#aaa', fontSize: '0.95rem' }}>
           Bienvenido al sistema institucional DAEJI. Selecciona una herramienta autorizada abajo o navega a través del menú.
         </p>
 
-        {(permisosTutor.asistencias || permisosTutor.pagos || permisosTutor.evaluaciones || permisosTutor.competencias || permisosTutor.gestionAtletas || permisosTutor.eventos) && (
+        {/* Validamos si tiene algún permiso para mostrar esta sección (incluyendo el de solicitudes) */}
+        {(permisosTutor.asistencias || permisosTutor.pagos || permisosTutor.evaluaciones || permisosTutor.competencias || permisosTutor.gestionAtletas || permisosTutor.eventos || permisosTutor.solicitudes) && (
           <div style={{ marginTop: '25px', borderTop: '1px solid rgba(255,255,255,0.08)', paddingTop: '20px' }}>
             <p style={{ fontSize: '0.8rem', color: '#3498db', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: '12px', letterSpacing: '0.5px' }}>
               Módulos Autorizados para tu Cuenta:
@@ -67,6 +110,14 @@ export default function TutorInicio({ atletzasConAtrasos, permisosTutor, navigat
                   🏆 Convocatorias y Eventos &rarr;
                 </button>
               )}
+              
+              {/* NUEVO BOTÓN: Solo se muestra si tiene asignado el permiso de Solicitudes */}
+              {permisosTutor.solicitudes && (
+                <button onClick={() => navigate('/master')} style={{ background: 'linear-gradient(135deg, #f1c40f, #2c3e50)', color: '#fff', border: 'none', padding: '10px 18px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.9rem' }}>
+                  🔔 Aprobar Solicitudes &rarr;
+                </button>
+              )}
+
               {permisosTutor.evaluaciones && (
                 <button onClick={() => alert("Módulo de evaluaciones.")} style={{ background: 'linear-gradient(135deg, #f39c12, #2c3e50)', color: '#fff', border: 'none', padding: '10px 18px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '0.9rem' }}>
                   📝 Evaluaciones &rarr;

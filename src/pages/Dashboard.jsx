@@ -11,6 +11,9 @@ import TutorAtletas from '../tutor/TutorAtletas';
 import TutorDatos from '../tutor/TutorDatos';
 import TutorSeguridad from '../tutor/TutorSeguridad';
 
+// IMPORTAMOS LA VISTA DE APROBACIONES PARA QUIEN TENGA EL PERMISO
+import MasterSolicitudes from '../master/MasterSolicitudes';
+
 export default function Dashboard() {
   const [usuario, setUsuario] = useState(null);
   const [seccionActiva, setSeccionActiva] = useState('inicio');
@@ -20,6 +23,7 @@ export default function Dashboard() {
   const [cargandoAlumnos, setCargandoAlumnos] = useState(true);
   const [atletzasConAtrasos, setAtletasConAtrasos] = useState([]);
 
+  // Agregamos 'solicitudes' al estado inicial
   const [permisosTutor, setPermisosTutor] = useState({
     asistencias: false,
     pagos: false,
@@ -27,7 +31,8 @@ export default function Dashboard() {
     evaluaciones: false,
     competencias: false,
     gestionAtletas: false,
-    eventos: false
+    eventos: false,
+    solicitudes: false // <--- NUEVO PERMISO
   });
 
   const navigate = useNavigate();
@@ -51,7 +56,8 @@ export default function Dashboard() {
       const docPermisosSnap = await getDoc(docPermisosRef);
 
       if (docPermisosSnap.exists() && docPermisosSnap.data().permisos) {
-        setPermisosTutor(docPermisosSnap.data().permisos);
+        // Combinamos los permisos existentes con los guardados en BD
+        setPermisosTutor(prev => ({ ...prev, ...docPermisosSnap.data().permisos }));
       }
 
       const q = query(collection(db, 'atletas'), where('tutorEmail', '==', emailTutor));
@@ -89,12 +95,11 @@ export default function Dashboard() {
     setMenuAbiertoMovil(false);
   };
 
-  if (!usuario) return <div className="contenedor-principal">Cargando...</div>;
+  if (!usuario) return <div className="contenedor-principal" style={{ background: 'var(--bg-principal)', color: '#fff', minHeight: '100vh', padding: '40px' }}>Cargando...</div>;
 
   return (
     <div className="tutor-container" translate="no">
       
-      {/* 1. ESTILOS CSS - MOBILE FIRST (Conectados a variables globales) */}
       <style>{`
         * { box-sizing: border-box; }
         .tutor-container {
@@ -160,7 +165,6 @@ export default function Dashboard() {
         }
       `}</style>
 
-      {/* 2. BARRA SUPERIOR PARA CELULARES */}
       <div className="mobile-header">
         {seccionActiva !== 'inicio' ? (
           <button key="btn-volver" onClick={() => cambiarSeccion('inicio')} className="btn-volver">
@@ -179,13 +183,11 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* 3. CAPA OSCURA PARA EL MENÚ EN CELULARES */}
       <div 
         className={`mobile-overlay ${menuAbiertoMovil ? 'active' : ''}`} 
         onClick={() => setMenuAbiertoMovil(false)}
       ></div>
 
-      {/* 4. BARRA LATERAL (DRAWER) */}
       <aside className={`sidebar ${!menuAbiertoMovil ? 'closed-mobile' : ''}`}>
         <div className="btn-cerrar-menu" style={{ textAlign: 'right', marginBottom: '10px' }}>
           <button onClick={() => setMenuAbiertoMovil(false)} style={{ background: 'transparent', border: 'none', color: '#fff', fontSize: '1.3rem', cursor: 'pointer' }}>✕</button>
@@ -198,41 +200,36 @@ export default function Dashboard() {
         <nav style={{ display: 'flex', flexDirection: 'column', gap: '8px', flex: 1, overflowY: 'auto' }}>
           <button 
             onClick={() => cambiarSeccion('inicio')} 
-            style={{ 
-              padding: '12px 15px', borderRadius: '8px', border: 'none', textAlign: 'left', fontWeight: 'bold', cursor: 'pointer', 
-              background: seccionActiva === 'inicio' ? 'var(--color-primario, #e63946)' : 'transparent', 
-              color: seccionActiva === 'inicio' ? '#fff' : '#aaa' 
-            }}
+            style={{ padding: '12px 15px', borderRadius: '8px', border: 'none', textAlign: 'left', fontWeight: 'bold', cursor: 'pointer', background: seccionActiva === 'inicio' ? 'var(--color-primario, #e63946)' : 'transparent', color: seccionActiva === 'inicio' ? '#fff' : '#aaa' }}
           >
             <span>🏠 Inicio y Alertas</span>
           </button>
           <button 
             onClick={() => cambiarSeccion('atletas')} 
-            style={{ 
-              padding: '12px 15px', borderRadius: '8px', border: 'none', textAlign: 'left', fontWeight: 'bold', cursor: 'pointer', 
-              background: seccionActiva === 'atletas' ? 'var(--color-primario, #e63946)' : 'transparent', 
-              color: seccionActiva === 'atletas' ? '#fff' : '#aaa' 
-            }}
+            style={{ padding: '12px 15px', borderRadius: '8px', border: 'none', textAlign: 'left', fontWeight: 'bold', cursor: 'pointer', background: seccionActiva === 'atletas' ? 'var(--color-primario, #e63946)' : 'transparent', color: seccionActiva === 'atletas' ? '#fff' : '#aaa' }}
           >
             <span>🥋 Mis Atletas ({misAlumnos.length})</span>
           </button>
+          
+          {/* BOTÓN CONDICIONAL: Solo se muestra si el tutor tiene permiso para aprobar solicitudes */}
+          {permisosTutor.solicitudes && (
+            <button 
+              onClick={() => cambiarSeccion('solicitudes')} 
+              style={{ padding: '12px 15px', borderRadius: '8px', border: 'none', textAlign: 'left', fontWeight: 'bold', cursor: 'pointer', background: seccionActiva === 'solicitudes' ? 'var(--color-primario, #e63946)' : 'transparent', color: seccionActiva === 'solicitudes' ? '#fff' : '#aaa' }}
+            >
+              <span>🔔 Aprobar Solicitudes</span>
+            </button>
+          )}
+
           <button 
             onClick={() => cambiarSeccion('datos')} 
-            style={{ 
-              padding: '12px 15px', borderRadius: '8px', border: 'none', textAlign: 'left', fontWeight: 'bold', cursor: 'pointer', 
-              background: seccionActiva === 'datos' ? 'var(--color-primario, #e63946)' : 'transparent', 
-              color: seccionActiva === 'datos' ? '#fff' : '#aaa' 
-            }}
+            style={{ padding: '12px 15px', borderRadius: '8px', border: 'none', textAlign: 'left', fontWeight: 'bold', cursor: 'pointer', background: seccionActiva === 'datos' ? 'var(--color-primario, #e63946)' : 'transparent', color: seccionActiva === 'datos' ? '#fff' : '#aaa' }}
           >
             <span>✏️ Modificar Mis Datos</span>
           </button>
           <button 
             onClick={() => cambiarSeccion('seguridad')} 
-            style={{ 
-              padding: '12px 15px', borderRadius: '8px', border: 'none', textAlign: 'left', fontWeight: 'bold', cursor: 'pointer', 
-              background: seccionActiva === 'seguridad' ? 'var(--color-primario, #e63946)' : 'transparent', 
-              color: seccionActiva === 'seguridad' ? '#fff' : '#aaa' 
-            }}
+            style={{ padding: '12px 15px', borderRadius: '8px', border: 'none', textAlign: 'left', fontWeight: 'bold', cursor: 'pointer', background: seccionActiva === 'seguridad' ? 'var(--color-primario, #e63946)' : 'transparent', color: seccionActiva === 'seguridad' ? '#fff' : '#aaa' }}
           >
             <span>🔒 Seguridad</span>
           </button>
@@ -246,7 +243,6 @@ export default function Dashboard() {
         </div>
       </aside>
 
-      {/* 5. CONTENIDO PRINCIPAL */}
       <main className="main-content">
         {seccionActiva === 'inicio' && (
           <TutorInicio 
@@ -266,6 +262,12 @@ export default function Dashboard() {
             navigate={navigate}
           />
         )}
+        
+        {/* RENDERIZAMOS LA VISTA DE SOLICITUDES SI LA SELECCIONA */}
+        {seccionActiva === 'solicitudes' && permisosTutor.solicitudes && (
+          <MasterSolicitudes key="solicitudes" />
+        )}
+
         {seccionActiva === 'datos' && (
           <TutorDatos 
             key="datos"

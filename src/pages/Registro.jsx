@@ -1,47 +1,62 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-// Importamos las herramientas de Firebase que configuramos antes
-import { auth } from '../firebase/config';
-import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { auth, db } from '../firebase/config';
+import { createUserWithEmailAndPassword, updateProfile, signOut } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
 import logoDaeji from '../assets/logo-letras.png';
 
 export default function Registro() {
-  // Aquí "guardamos" temporalmente lo que el usuario escribe en las cajas de texto
   const [nombre, setNombre] = useState('');
   const [correo, setCorreo] = useState('');
   const [password, setPassword] = useState('');
   const [confirmar, setConfirmar] = useState('');
   const [error, setError] = useState('');
   
-  // Herramienta para "navegar" o mover al usuario a otra pantalla
   const navigate = useNavigate();
 
-  // Esta función se ejecuta cuando el usuario presiona "CREAR CUENTA"
   const manejarRegistro = async (e) => {
-    e.preventDefault(); // Evita que la página se recargue
-    setError(''); // Limpiamos errores previos
+    e.preventDefault();
+    setError(''); 
 
-    // 1. Validar que las contraseñas sean iguales
     if (password !== confirmar) {
       setError('Las contraseñas no coinciden.');
-      return; // Detenemos el proceso aquí
+      return; 
     }
 
     try {
-      // 2. Le pedimos a Firebase que cree el usuario con correo y contraseña
+      // 1. Creamos el usuario en Firebase Auth
       const credencialUsuario = await createUserWithEmailAndPassword(auth, correo, password);
       
-      // 3. Le agregamos el nombre al perfil recién creado en Firebase
+      // 2. Agregamos el nombre
       await updateProfile(credencialUsuario.user, {
         displayName: nombre
       });
 
-      // 4. Si todo salió bien, enviamos al usuario al inicio (más adelante irá al dashboard)
-      alert("¡Cuenta creada correctamente!");
-      navigate('/dashboard'); 
+      // 3. Lo guardamos en Firestore con estado "pendiente" para requerir aprobación
+      const idDoc = correo.replace(/[@.]/g, '_');
+      await setDoc(doc(db, 'roles_usuarios', idDoc), {
+        correo: correo,
+        nombre: nombre,
+        estado: 'pendiente', // <--- Estado de Sala de Espera
+        fechaRegistro: new Date().toISOString(),
+        permisos: { // Permisos en falso por defecto hasta que el Master los edite
+          gestionAtletas: false,
+          asistencias: false,
+          pagos: false,
+          expedientes: false,
+          evaluaciones: false,
+          competencias: false,
+          eventos: false
+        }
+      });
+
+      // 4. Cerramos la sesión inmediatamente para que no salte al Dashboard
+      await signOut(auth);
+
+      alert("¡Cuenta creada con éxito! Tu acceso está pendiente de autorización por la administración.");
+      navigate('/login'); 
 
     } catch (errorFirebase) {
-      // Si Firebase detecta un error (ej: correo ya existe o clave muy corta), lo mostramos
       if (errorFirebase.code === 'auth/email-already-in-use') {
         setError('Este correo ya está registrado.');
       } else if (errorFirebase.code === 'auth/weak-password') {
@@ -58,7 +73,6 @@ export default function Registro() {
         <img src={logoDaeji} alt="Logo DAEJI" className="logo-auth" />
         <h2>Crear una cuenta</h2>
         
-        {/* Si hay un error, mostramos este recuadro rojo */}
         {error && <div className="alerta-error">{error}</div>}
 
         <form onSubmit={manejarRegistro} className="formulario">

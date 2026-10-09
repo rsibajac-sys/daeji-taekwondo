@@ -10,6 +10,8 @@ import MasterDashboard from './pages/MasterDashboard';
 import Asistencia from './pages/Asistencia';
 import Pagos from './pages/Pagos';
 import ConfiguracionAula from './pages/ConfiguracionAula'; // <-- 1. Asegúrate de importar la vista
+import PanelEvaluador from './pages/PanelEvaluador';
+
 
 function App() {
   return (
@@ -27,6 +29,8 @@ function App() {
         <Route path="/asistencia" element={<Asistencia />} />
         <Route path="/pagos" element={<Pagos />} /> {/* <-- 2. DEFINIR LA RUTA */}
         <Route path="/master-aula" element={<ConfiguracionAula />} />
+        <Route path="/evaluador" element={<PanelEvaluador />} />
+        
       </Routes>
     </BrowserRouter>
   );

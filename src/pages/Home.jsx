@@ -36,20 +36,11 @@ export default function Home() {
     });
   }, []);
 
-  const scrollToContacto = () => {
-    const contactoSection = document.getElementById('seccion-contacto');
-    if (contactoSection) contactoSection.scrollIntoView({ behavior: 'smooth' });
-  };
-
   const scrollToHorarios = () => {
     const horariosSection = document.getElementById('seccion-horarios');
     if (horariosSection) horariosSection.scrollIntoView({ behavior: 'smooth' });
   };
 
-  /* ========================================================================
-     BASE DE DATOS DE ATLETAS (TUS TEXTOS ACTUALIZADOS)
-     ======================================================================== */
-  
   const atletasInternacionales = [
     { 
       id: 1, 
@@ -132,7 +123,8 @@ export default function Home() {
           <p className="daeji-subtitle">Escuela de Taekwondo y Formación Deportiva Integral</p>
           
           <div className="daeji-hero-buttons">
-            <button className="daeji-btn-primary" onClick={scrollToContacto}>SOLICITAR PREINSCRIPCIÓN</button>
+            {/* CAMBIO AQUI: Envía directamente al registro */}
+            <button className="daeji-btn-primary" onClick={() => navigate('/registro')}>SOLICITAR PREINSCRIPCIÓN</button>
             <button className="daeji-btn-outline" onClick={scrollToHorarios}>CONOCER HORARIOS</button>
           </div>
         </div>
@@ -201,7 +193,6 @@ export default function Home() {
           <div className="daeji-line daeji-center-box" data-aos="fade-up"></div>
           
           <div className="daeji-grid-2 daeji-mt-4">
-            {/* ETAPAS DE DESARROLLO */}
             <div className="daeji-panel" data-aos="fade-right">
               <h3 className="daeji-h3-blue">ETAPAS DE DESARROLLO</h3>
               <ul className="daeji-list">
@@ -212,7 +203,6 @@ export default function Home() {
               </ul>
             </div>
 
-            {/* AGENDA DE ENTRENAMIENTO (Sede Principal) */}
             <div className="daeji-panel" data-aos="fade-left">
               <h3 className="daeji-h3-blue">AGENDA DE ENTRENAMIENTO</h3>
               <div className="daeji-alert-red">📍 Sede: Salón Comunal Garabito, León XIII, Tibás.</div>
@@ -232,7 +222,6 @@ export default function Home() {
             </div>
           </div>
 
-          {/* NUEVA SEDE PRÓXIMAMENTE */}
           <div className="daeji-mt-4" style={{maxWidth: '600px', margin: '30px auto 0'}}>
             <div className="daeji-panel" data-aos="fade-up" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', textAlign: 'center' }}>
               <h3 className="daeji-h3-blue">PRÓXIMA APERTURA</h3>
@@ -249,11 +238,9 @@ export default function Home() {
               </div>
             </div>
           </div>
-
         </div>
       </section>
 
-      {/* SECCIÓN ATLETAS DESTACADOS */}
       <section className="daeji-section daeji-dark">
         <div className="daeji-container">
           
@@ -263,13 +250,11 @@ export default function Home() {
             <p className="daeji-p">Representación centroamericana forjada en nuestro dojang.</p>
           </div>
 
-          {/* ATLETAS INTERNACIONALES */}
           <div className="daeji-grid-2 daeji-mt-4">
             {atletasInternacionales.map((atleta, index) => (
               <div className="daeji-flip-card daeji-flip-uniforme" data-aos="fade-up" data-aos-delay={index * 100} key={atleta.id}>
                 <div className="daeji-flip-card-inner">
                   
-                  {/* FRENTE */}
                   <div className="daeji-flip-card-front">
                     <div className="daeji-atleta-photo-contenedor">
                       {atleta.imagen ? (
@@ -285,7 +270,6 @@ export default function Home() {
                     </div>
                   </div>
 
-                  {/* DORSO */}
                   <div className="daeji-flip-card-back">
                     <h4>{atleta.nombre}</h4>
                     <div className="daeji-line" style={{margin: '10px auto', width: '30px'}}></div>
@@ -296,13 +280,11 @@ export default function Home() {
                       ))}
                     </ul>
                   </div>
-
                 </div>
               </div>
             ))}
           </div>
 
-          {/* ATLETAS DESTACADOS EVENTOS NACIONALES */}
           <div className="daeji-center-text daeji-mt-4" data-aos="fade-up" style={{marginTop: '60px'}}>
             <span className="daeji-badge" style={{background: '#e63946'}}>PROCESO Y DESARROLLO</span>
             <h2 className="daeji-h2" style={{fontSize: '1.4rem', marginBottom: '5px'}}>ÉLITE LOGROS NACIONALES</h2>
@@ -313,7 +295,6 @@ export default function Home() {
               <div className="daeji-flip-card daeji-flip-uniforme" data-aos="fade-up" data-aos-delay={index * 100} key={atleta.id}>
                 <div className="daeji-flip-card-inner">
                   
-                  {/* FRENTE */}
                   <div className="daeji-flip-card-front">
                     <div className="daeji-atleta-photo-contenedor">
                       {atleta.imagen ? (
@@ -329,7 +310,6 @@ export default function Home() {
                     </div>
                   </div>
 
-                  {/* DORSO */}
                   <div className="daeji-flip-card-back">
                     <h4>{atleta.nombre}</h4>
                     <div className="daeji-line" style={{margin: '10px auto', width: '30px'}}></div>
@@ -340,12 +320,10 @@ export default function Home() {
                       ))}
                     </ul>
                   </div>
-
                 </div>
               </div>
             ))}
           </div>
-
         </div>
       </section>
 
