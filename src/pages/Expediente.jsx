@@ -190,10 +190,9 @@ export default function Expediente() {
       setNotaPersonal(datosAtleta.notasEstudio?.[gradoFinal] || '');
 
       const queryAsistencias = await getDocs(collection(db, 'asistencias'));
-      const registrosAlumno = [];
-      let totalClasesEsperadasHistoricas = 0, totalClasesAsistidasHistoricas = 0;
-      let totalClasesEsperadasAnual = 0, totalClasesAsistidasAnual = 0;
-      let totalClasesEsperadasSemestre = 0, totalClasesAsistidasSemestre = 0;
+      
+      // Usamos un mapa para unificar registros duplicados por fecha exacta
+      const mapaAsistenciasUnicas = {};
 
       const anioActual = new Date().getFullYear();
       const mesActual = new Date().getMonth();
@@ -202,33 +201,48 @@ export default function Expediente() {
 
       queryAsistencias.forEach((docAsistencia) => {
         const dataFecha = docAsistencia.data();
-        const fechaStr = dataFecha.fecha;
+        const fechaStr = dataFecha.fecha || docAsistencia.id;
         const detalles = dataFecha.detalles || {};
 
         if (detalles[idAtleta]) {
-          const estado = detalles[idAtleta];
-          registrosAlumno.push({ fecha: fechaStr, estado: estado });
+          const datoBruto = detalles[idAtleta];
+          const estado = typeof datoBruto === 'object' && datoBruto !== null ? datoBruto.estado : datoBruto;
 
-          const fechaObj = new Date(fechaStr + 'T00:00:00');
-          const anioFecha = fechaObj.getFullYear();
-          const mesFecha = fechaObj.getMonth();
-          const esSemestreFechaPrimer = mesFecha < 6;
+          if (estado) {
+            // Guardamos o sobrescribimos en el mapa usando la fecha como llave única para evitar duplicados visuales
+            mapaAsistenciasUnicas[fechaStr] = String(estado).toLowerCase().trim();
+          }
+        }
+      });
 
-          const diasMap = { 1: "Lunes", 2: "Martes", 3: "Miércoles", 4: "Jueves", 5: "Viernes", 6: "Sábados" };
-          const diaSemanaStr = diasMap[fechaObj.getDay()];
+      const registrosAlumno = [];
+      let totalClasesEsperadasHistoricas = 0, totalClasesAsistidasHistoricas = 0;
+      let totalClasesEsperadasAnual = 0, totalClasesAsistidasAnual = 0;
+      let totalClasesEsperadasSemestre = 0, totalClasesAsistidasSemestre = 0;
 
-          if (diasEntrenoAtleta.includes(diaSemanaStr)) {
-            totalClasesEsperadasHistoricas++;
-            if (estado === 'presente' || estado === 'justificado') totalClasesAsistidasHistoricas++;
+      // Procesamos las asistencias únicas ya depuradas
+      Object.entries(mapaAsistenciasUnicas).forEach(([fechaStr, estado]) => {
+        registrosAlumno.push({ fecha: fechaStr, estado: estado });
 
-            if (anioFecha === anioActual) {
-              totalClasesEsperadasAnual++;
-              if (estado === 'presente' || estado === 'justificado') totalClasesAsistidasAnual++;
+        const fechaObj = new Date(fechaStr + 'T00:00:00');
+        const anioFecha = fechaObj.getFullYear();
+        const mesFecha = fechaObj.getMonth();
+        const esSemestreFechaPrimer = mesFecha < 6;
 
-              if (esSemestreFechaPrimer === esPrimerSemestre) {
-                totalClasesEsperadasSemestre++;
-                if (estado === 'presente' || estado === 'justificado') totalClasesAsistidasSemestre++;
-              }
+        const diasMap = { 1: "Lunes", 2: "Martes", 3: "Miércoles", 4: "Jueves", 5: "Viernes", 6: "Sábados" };
+        const diaSemanaStr = diasMap[fechaObj.getDay()];
+
+        if (diasEntrenoAtleta.includes(diaSemanaStr)) {
+          totalClasesEsperadasHistoricas++;
+          if (estado === 'presente' || estado === 'justificado') totalClasesAsistidasHistoricas++;
+
+          if (anioFecha === anioActual) {
+            totalClasesEsperadasAnual++;
+            if (estado === 'presente' || estado === 'justificado') totalClasesAsistidasAnual++;
+
+            if (esSemestreFechaPrimer === esPrimerSemestre) {
+              totalClasesEsperadasSemestre++;
+              if (estado === 'presente' || estado === 'justificado') totalClasesAsistidasSemestre++;
             }
           }
         }
